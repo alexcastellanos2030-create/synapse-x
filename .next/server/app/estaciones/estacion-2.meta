@@ -1,0 +1,39 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/estaciones/layout,_N_T_/estaciones/estacion-2/layout,_N_T_/estaciones/estacion-2/page,_N_T_/estaciones/estacion-2"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/estaciones/estacion-2/__PAGE__"
+  ],
+  "prefetchHints": {
+    "hints": 64,
+    "slots": {
+      "children": {
+        "hints": 96,
+        "slots": {
+          "children": {
+            "hints": 96,
+            "slots": {
+              "children": {
+                "hints": 160,
+                "slots": null
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "routeCache": {
+    "key": "/route-cache/APP_PAGE/521ebccef2b21068da965b4303ab7d6e4a21ce8f04e25817e7ae266a64ff88ce/$/estaciones/estacion-2",
+    "owner": {
+      "kind": "APP_PAGE",
+      "sourceRoute": "/estaciones/estacion-2/page"
+    },
+    "isFallback": false
+  }
+}

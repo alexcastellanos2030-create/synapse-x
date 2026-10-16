@@ -1,0 +1,13 @@
+var R=require("../../../chunks/ssr/[turbopack]_runtime.js")("server/app/estaciones/estacion-6/page.js")
+R.c("server/chunks/ssr/[root-of-the-server]__19u-4d4enyst9._.js")
+R.c("server/chunks/ssr/node_modules_next_dist_esm_build_templates_app-page_0pdr0ulnzt2tp.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0_1n4t6a0-h5a._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__07irjv8er3ezd._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__1ireqd10pl8it._.js")
+R.c("server/chunks/ssr/node_modules_next_dist_client_components_0wpq8j32_ibz4._.js")
+R.c("server/chunks/ssr/node_modules_next_dist_client_components_builtin_forbidden_0symwr9mbf-fh.js")
+R.c("server/chunks/ssr/node_modules_next_dist_client_components_builtin_unauthorized_0l_sp0xky89qu.js")
+R.c("server/chunks/ssr/node_modules_next_dist_1c5t_vsn6u8fr._.js")
+R.c("server/chunks/ssr/_next-internal_server_app_estaciones_estacion-6_page_actions_0_kr6la8ss02u.js")
+R.m(34905)
+module.exports=R.m(34905).exports

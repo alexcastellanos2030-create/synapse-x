@@ -1,0 +1,10 @@
+{"timestamp":"00:00:05.533","source":"Server","level":"LOG","message":""}
+{"timestamp":"00:00:08.925","source":"Server","level":"LOG","message":"○ Compiling / ..."}
+{"timestamp":"00:00:15.743","source":"Server","level":"WARN","message":"⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.\nRead more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport"}
+{"timestamp":"00:00:16.893","source":"Server","level":"WARN","message":"⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.\nRead more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport"}
+{"timestamp":"00:00:19.946","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:00:37.063","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:26:42.021","source":"Server","level":"WARN","message":"⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.\nRead more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport"}
+{"timestamp":"00:26:42.677","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:27:04.213","source":"Server","level":"WARN","message":"⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.\nRead more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport"}
+{"timestamp":"00:27:04.660","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
