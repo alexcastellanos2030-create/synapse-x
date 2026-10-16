@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Estacion1, { LoteCreado, PedidoOperativo } from "./estaciones/estacion-1/page";
 import Estacion2, { LotePesaje } from "./estaciones/estacion-2/page";
-import { SUPERUSER_CREDENCIAL, generar30PedidosPrueba } from "@/data/bakeryConstants";
-import TablaTrazabilidadEstandar from "@/components/TablaTrazabilidadEstandar";
+import { SUPERUSER_CREDENCIAL, generar30PedidosPrueba } from "./data/bakeryConstants";
+import TablaTrazabilidadEstandar from "./components/TablaTrazabilidadEstandar";
 
 export interface AlertaSistema {
   id: string;
