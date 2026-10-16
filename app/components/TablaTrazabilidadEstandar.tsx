@@ -1,6 +1,6 @@
 // components/TablaTrazabilidadEstandar.tsx
 import React from "react";
-import { PedidoOperativo } from "../app/estaciones/estacion-1/page";
+import { PedidoOperativo } from "../estaciones/estacion-1/page";
 
 interface Props {
   pedidos: PedidoOperativo[];

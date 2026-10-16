@@ -1,5 +1,26 @@
-// data/bakeryConstants.ts
-import { PedidoOperativo } from "../app/estaciones/estacion-1/page";
+// app/data/bakeryConstants.ts
+
+export interface PedidoOperativo {
+  loteId: string;
+  cliente: string;
+  producto: string;
+  tipoMasa: string;
+  gramajePiezaG: number;
+  cantidadSolicitada: number;
+  unidadesSeguridad: number;
+  existenciaBodega: number;
+  cantidadNetaFabricar: number;
+  modalidad: string;
+  fechaRecepcion: string;
+  fechaEntrega: string;
+  cobertura: string;
+  topping: string;
+  observacionBodega: string;
+  observaciones: string;
+  responsableNombre: string;
+  responsableCedula: string;
+  estado: "En Cola" | "En Producción" | "Completado";
+}
 
 export const SUPERUSER_CREDENCIAL = {
   nombre: "Alexander Segundo Castellanos Perozo",
