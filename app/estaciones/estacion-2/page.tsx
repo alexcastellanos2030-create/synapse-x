@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { LoteCreado } from "../estacion-1/page";
+import TablaTrazabilidadEstandar from "../../components/TablaTrazabilidadEstandar";
 
 // Tipos exportados requeridos por el archivo principal (app/page.tsx)
 export type LotePesaje = LoteCreado;
@@ -21,6 +22,7 @@ interface IngredienteFila {
 export default function Estacion2({
   lotesActivos = [],
   onLoteCompletado,
+  esClaro = false
 }: Estacion2Props) {
   const [loteSeleccionadoId, setLoteSeleccionadoId] = useState<string>(
     lotesActivos.length > 0 ? lotesActivos[0].idLote : ""
@@ -124,50 +126,9 @@ export default function Estacion2({
             {acordeonAbierto && (
               <div className="p-4 bg-slate-950/80 border-t border-slate-800 space-y-3">
                 <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                  <span>🔍</span> Trazabilidad Detallada de los Pedidos en este Lote ({loteActual.pedidosAsociados.length}):
+                  <span>🔍</span> Trazabilidad Estándar Completa de Pedidos en este Lote ({loteActual.pedidosAsociados.length}):
                 </div>
-                <div className="overflow-x-auto max-h-64">
-                  <table className="w-full text-left text-[11px] border-collapse">
-                    <thead>
-                      <tr className="bg-slate-900 text-slate-400 border-b border-slate-800">
-                        <th className="p-2.5">ID Pedido / Observación</th>
-                        <th className="p-2.5">Cliente</th>
-                        <th className="p-2.5">Producto (Modelo)</th>
-                        <th className="p-2.5">Tipo de Masa</th>
-                        <th className="p-2.5">Cobertura y Topping</th>
-                        <th className="p-2.5 text-center">Cantidad</th>
-                        <th className="p-2.5 text-center">Seguridad</th>
-                        <th className="p-2.5 text-center">Bodega</th>
-                        <th className="p-2.5 text-center text-emerald-400 font-bold">Total</th>
-                        <th className="p-2.5 text-center text-amber-400 font-bold">Masa (Kg)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-900 text-slate-300">
-                      {loteActual.pedidosAsociados.map((p) => {
-                        const pesoKg = ((p.cantidadNetaFabricar * p.gramajePiezaG) / 1000).toFixed(2);
-                        return (
-                          <tr key={p.loteId} className="hover:bg-slate-900/40">
-                            <td className="p-2.5 font-mono">
-                              <div className="text-amber-400 font-bold">{p.loteId}</div>
-                              <div className="text-[9px] text-amber-200/90 bg-amber-500/10 px-1 py-0.5 rounded mt-0.5 border border-amber-500/20 font-sans">
-                                {p.observaciones}
-                              </div>
-                            </td>
-                            <td className="p-2.5 font-semibold">{p.cliente}</td>
-                            <td className="p-2.5 text-slate-200 font-medium">{p.producto}</td>
-                            <td className="p-2.5 text-slate-400">{p.tipoMasa}</td>
-                            <td className="p-2.5 text-slate-400">{p.cobertura} + {p.topping}</td>
-                            <td className="p-2.5 text-center font-mono">{p.cantidadSolicitada}</td>
-                            <td className="p-2.5 text-center font-mono">{p.unidadesSeguridad}</td>
-                            <td className="p-2.5 text-center font-mono">{p.existenciaBodega}</td>
-                            <td className="p-2.5 text-center font-mono font-bold text-emerald-400">{p.cantidadNetaFabricar}</td>
-                            <td className="p-2.5 text-center font-mono font-bold text-amber-400">{pesoKg} Kg</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <TablaTrazabilidadEstandar pedidos={loteActual.pedidosAsociados} esClaro={esClaro} />
               </div>
             )}
           </div>

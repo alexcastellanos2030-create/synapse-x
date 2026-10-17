@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import TablaTrazabilidadEstandar from "../../components/TablaTrazabilidadEstandar";
 
 export interface PedidoRegistrado {
   loteId: string;
@@ -52,7 +53,7 @@ const BASE_DATOS_OPERARIOS: Record<string, string> = {
   "11223344": "Jose Manuel (Ventas)",
 };
 
-export default function Estacion1({ portal = "superuser", onLoteCreado }: Estacion1Props) {
+export default function Estacion1({ portal = "superuser", onLoteCreado, esClaro = false }: Estacion1Props) {
   const [amasadoraSeleccionada, setAmasadoraSeleccionada] = useState<number | null>(null);
   const [toleranciaKg] = useState<number>(0.5);
   const [recetaSeleccionada, setRecetaSeleccionada] = useState<string>("TODAS");
@@ -322,7 +323,7 @@ export default function Estacion1({ portal = "superuser", onLoteCreado }: Estaci
         </div>
       </div>
 
-      {/* PASO 3: TABLA DE PEDIDOS */}
+      {/* PASO 3: TABLA DE SELECCIÓN DE PEDIDOS PARA LOTE */}
       <div className={`bg-[#111827] border rounded-lg p-3 space-y-2 shadow-md transition-all ${(!amasadoraSeleccionada || recetaSeleccionada === "TODAS") ? "opacity-50 pointer-events-none" : "border-slate-800"}`}>
         <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
           <span className="font-bold text-amber-400 uppercase tracking-wider text-[11px]">3️⃣ Selección de Pedidos ({recetaSeleccionada})</span>
@@ -383,6 +384,17 @@ export default function Estacion1({ portal = "superuser", onLoteCreado }: Estaci
             🔒 Complete el Paso 1 y Paso 2 para desbloquear y visualizar los pedidos.
           </div>
         )}
+      </div>
+
+      {/* 📊 TABLA DE TRAZABILIDAD ESTÁNDAR COMPLETA (10 COLUMNAS UNIFORMES) */}
+      <div className="bg-[#111827] border border-slate-800 rounded-lg p-3 space-y-2 shadow-md">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+          <span className="font-bold text-amber-400 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+            📋 Resumen de Trazabilidad Estándar Completa
+          </span>
+          <span className="text-[10px] text-slate-400 font-mono">10 Columnas Unificadas</span>
+        </div>
+        <TablaTrazabilidadEstandar pedidos={pedidos} esClaro={esClaro} />
       </div>
 
       {/* PASO 4: DATOS DEL OPERARIO Y BOTÓN AVANZAR + BARRA SUPERUSER FOOTER */}
