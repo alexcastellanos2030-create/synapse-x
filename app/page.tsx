@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "./lib/supabase";
 import SuperuserLogin from "./components/SuperuserLogin";
-import OperarioLogin from "./components/OperarioLogin";
+import EngineerLogin from "./components/EngineerLogin";
+import TechnicianLogin from "./components/TechnicianLogin";
+import UsuarioLogin from "./components/UsuarioLogin";
 import PanelSuperuserPage from "./components/PanelSuperuserPage";
-import PanelAdminLocal from "./components/PanelAdminLocal";
 import Sidebar from "./components/Sidebar";
 import SidebarSuperuser from "./components/SidebarSuperuser";
 import PanelProduccionesPestañas from "./components/PanelProduccionesPestañas";
@@ -19,7 +20,8 @@ export interface UsuarioRegistrado {
   nombre: string;
   cedula: string;
   clave: string;
-  rol: "admin" | "operario" | "cajera" | "supervisor" | "superuser";
+  rol: "admin" | "operario" | "cajera" | "supervisor" | "superuser" | "ingeniero" | "tecnico";
+  nivel?: string; // Nivel 1, 2 o 3
   bloqueado: boolean;
 }
 
@@ -48,7 +50,7 @@ export default function SynapseOS() {
     return false;
   });
 
-  const [rolActivo, setRolActivo] = useState<"superuser" | "admin" | "operario" | "cajera" | "supervisor">((): any => {
+  const [rolActivo, setRolActivo] = useState<"superuser" | "ingeniero" | "tecnico" | "operario" | "admin" | "cajera" | "supervisor">((): any => {
     if (typeof window !== "undefined") {
       const savedRol = localStorage.getItem("synapse_rol");
       if (savedRol) return savedRol as any;
@@ -56,19 +58,28 @@ export default function SynapseOS() {
     return "superuser";
   });
 
-  const [tipoPortalLogin, setTipoPortalLogin] = useState<"superuser" | "personal">("superuser");
+  // Nivel de ejecución activo (Nivel 1, Nivel 2 o Nivel 3)
+  const [nivelActivo, setNivelActivo] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("synapse_nivel") || "Nivel 3";
+    }
+    return "Nivel 3";
+  });
+
+  // Selector entre los 4 portales de login
+  const [tipoPortalLogin, setTipoPortalLogin] = useState<"superuser" | "engineer" | "technician" | "usuario">("superuser");
+  
   const [usuariosAutorizados, setUsuariosAutorizados] = useState<UsuarioRegistrado[]>([]);
   const [alertasSistema, setAlertasSistema] = useState<any[]>([]);
-  
-  // Cambiamos a string | number para admitir el prefijo "SU" en las estaciones de superusuario
   const [estacionActiva, setEstacionActiva] = useState<string | number>(1);
   const [lotesActivos, setLotesActivos] = useState<any[]>([]);
   
   const [sidebarColapsada, setSidebarColapsada] = useState<boolean>(false);
   const [sidebarMovilAbierta, setSidebarMovilAbierta] = useState<boolean>(false);
   const [superuserModoActivo, setSuperuserModoActivo] = useState<boolean>(false);
+  const [temaVisual, setTemaVisual] = useState<"oscuro" | "claro" | "sistema">("oscuro");
 
-  // SINCRONIZACIÓN EN TIEMPO REAL CON SUPABASE (Laptop y Móvil)
+  // SINCRONIZACIÓN EN TIEMPO REAL CON SUPABASE
   useEffect(() => {
     async function cargarUsuariosSupabase() {
       try {
@@ -94,32 +105,15 @@ export default function SynapseOS() {
     };
   }, []);
 
-  const handleIngresoSuperuser = (rol: "superuser", cedula: string, clave1: string, clave2: string) => {
-    const cedulaLimpia = cedula.trim();
-    if (cedulaLimpia === SUPERUSER_CREDENCIAL.cedula) {
-      const esValidaArriba = SUPERUSER_CREDENCIAL.clavesValidas.includes(clave1);
-      const esValidaAbajo = SUPERUSER_CREDENCIAL.clavesValidas.includes(clave2);
-
-      if (esValidaArriba || esValidaAbajo || (clave1 && clave2)) {
-        setAutenticado(true);
-        setRolActivo("superuser");
-        if (typeof window !== "undefined") {
-          localStorage.setItem("synapse_autenticado", "true");
-          localStorage.setItem("synapse_rol", "superuser");
-          localStorage.setItem("synapse_ultima_actividad", String(Date.now()));
-        }
-        return;
-      }
-    }
-    alert("❌ Credenciales de Superuser incorrectas.");
-  };
-
-  const handleIngresoOperario = (rol: any, cedula: string, clave: string) => {
+  // Manejo de ingresos unificado guardando rol y nivel
+  const handleIngresoConRolYNivel = (rol: any, nivel: string = "Nivel 3") => {
     setAutenticado(true);
     setRolActivo(rol);
+    setNivelActivo(nivel);
     if (typeof window !== "undefined") {
       localStorage.setItem("synapse_autenticado", "true");
       localStorage.setItem("synapse_rol", rol);
+      localStorage.setItem("synapse_nivel", nivel);
       localStorage.setItem("synapse_ultima_actividad", String(Date.now()));
     }
   };
@@ -164,31 +158,63 @@ export default function SynapseOS() {
     setUsuariosAutorizados(usuariosRestaurados);
   };
 
+  // CONTROL DE RUTA DE LOGIN (Los 4 Portales con sus botones de selección)
   if (!autenticado) {
-    if (tipoPortalLogin === "superuser") {
-      return (
-        <div>
-          <div className="absolute top-4 left-4 z-50">
-            <button
-              type="button"
-              onClick={() => setTipoPortalLogin("personal")}
-              className="px-4 py-2 bg-zinc-900 text-amber-400 border border-amber-500/40 rounded-xl text-xs font-mono font-bold shadow-lg hover:bg-zinc-800 transition-all cursor-pointer"
-            >
-              👤 Ir a Portal Operarios
-            </button>
-          </div>
-          <SuperuserLogin onLoginSuccess={handleIngresoSuperuser} />
+    return (
+      <div className="relative min-h-screen bg-black">
+        <div className="absolute top-4 left-4 right-4 z-50 flex flex-wrap gap-2 justify-center md:justify-start">
+          <button
+            type="button"
+            onClick={() => setTipoPortalLogin("superuser")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
+              tipoPortalLogin === "superuser" ? "bg-emerald-600 text-black border-emerald-400 shadow-lg" : "bg-zinc-900 text-emerald-400 border-emerald-500/40 hover:bg-zinc-800"
+            }`}
+          >
+            👑 Portal Superuser (Creador)
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipoPortalLogin("engineer")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
+              tipoPortalLogin === "engineer" ? "bg-cyan-600 text-black border-cyan-400 shadow-lg" : "bg-zinc-900 text-cyan-400 border-cyan-500/40 hover:bg-zinc-800"
+            }`}
+          >
+            ⚙️ Portal Ingeniero
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipoPortalLogin("technician")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
+              tipoPortalLogin === "technician" ? "bg-amber-600 text-black border-amber-400 shadow-lg" : "bg-zinc-900 text-amber-400 border-amber-500/40 hover:bg-zinc-800"
+            }`}
+          >
+            🔧 Portal Técnico
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipoPortalLogin("usuario")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
+              tipoPortalLogin === "usuario" ? "bg-purple-600 text-white border-purple-400 shadow-lg" : "bg-zinc-900 text-purple-400 border-purple-500/40 hover:bg-zinc-800"
+            }`}
+          >
+            👤 Portal de Usuario / Operario
+          </button>
         </div>
-      );
-    } else {
-      return (
-        <OperarioLogin
-          usuarios={usuariosAutorizados}
-          onLoginSuccess={handleIngresoOperario}
-          onVolverSuperuser={() => setTipoPortalLogin("superuser")}
-        />
-      );
-    }
+
+        <div className="pt-16">
+          {tipoPortalLogin === "superuser" && <SuperuserLogin onLoginSuccess={() => handleIngresoConRolYNivel("superuser", "Nivel 3")} />}
+          {tipoPortalLogin === "engineer" && <EngineerLogin />}
+          {tipoPortalLogin === "technician" && <TechnicianLogin />}
+          {tipoPortalLogin === "usuario" && (
+            <UsuarioLogin
+              usuarios={usuariosAutorizados}
+              onLoginSuccess={(rol, cedula, clave) => handleIngresoConRolYNivel(rol, "Nivel 3")}
+              onVolverSuperuser={() => setTipoPortalLogin("superuser")}
+            />
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -205,82 +231,91 @@ export default function SynapseOS() {
           setEstacionActiva={setEstacionActiva}
           rolActivo={rolActivo as any}
           conmutarRol={conmutarRol}
-          temaVisual={"oscuro"}
-          setTemaVisual={() => {}}
+          temaVisual={temaVisual}
+          setTemaVisual={setTemaVisual}
           handleCerrarSesion={handleCerrarSesion}
           lotesActivos={lotesActivos}
+          superuserModoActivo={superuserModoActivo}
+          setSuperuserModoActivo={setSuperuserModoActivo}
           onActivarSuperuser={() => {
-            setSuperuserModoActivo(true);
-            setEstacionActiva("SU99");
+            if (rolActivo === "superuser") {
+              setSuperuserModoActivo(true);
+              setEstacionActiva("SU99");
+            } else {
+              alert("⚠️ Acceso restringido: El área de gobernanza raíz es exclusiva del Creador.");
+            }
           }}
         />
       )}
 
-      {/* 2. SIDEBAR EXCLUSIVO DE SUPERUSER */}
-      <SidebarSuperuser
-        superuserModoActivo={superuserModoActivo}
-        setSuperuserModoActivo={setSuperuserModoActivo}
-        rolActivo={rolActivo as any}
-        estacionActiva={estacionActiva}
-        setEstacionActiva={setEstacionActiva}
-      />
+      {/* 2. SIDEBAR EXCLUSIVO DE SUPERUSER (Exclusivo Creador) */}
+      {rolActivo === "superuser" && (
+        <SidebarSuperuser
+          superuserModoActivo={superuserModoActivo}
+          setSuperuserModoActivo={setSuperuserModoActivo}
+          rolActivo={rolActivo as any}
+          estacionActiva={estacionActiva}
+          setEstacionActiva={setEstacionActiva}
+        />
+      )}
 
       {/* CONTENIDO PRINCIPAL */}
       <main className="flex-1 flex flex-col h-full overflow-hidden p-3 sm:p-6 bg-black text-white w-full">
         <header className="mb-4 bg-zinc-950 border border-zinc-800 px-4 py-3 rounded-2xl shadow-md flex items-center justify-between shrink-0">
           <h2 className="text-xs sm:text-base font-black text-amber-500 font-mono uppercase tracking-wider pl-10 md:pl-0 truncate">
             {estacionActiva === 1
-              ? "⚡ Centro de Mando Operativo (Dashboard)"
-              : estacionActiva === "SU99"
-              ? (rolActivo === "superuser" 
-                  ? "👑 Panel de Control y Gobernanza Superuser (Control de Usuarios)" 
-                  : "💼 Panel de Administración Local de Sucursal")
-              : estacionActiva === "SU4"
-              ? "🛡️ Módulo de Whitelist y Permisos Granulares"
+              ? `⚡ Centro de Mando (${rolActivo.toUpperCase()} ${nivelActivo})`
+              : estacionActiva === "SU99" && rolActivo === "superuser"
+              ? "👑 Panel de Control y Gobernanza Superuser"
               : estacionActiva === 105
               ? "⚙️ Módulo Central de Producción"
               : estacionActiva === 0
               ? "🛒 Módulo de Gestión de Pedidos"
-              : estacionActiva === 115
-              ? "🛡️ Centro de Protocolos y Puntos de Restauración OSAI"
               : `Módulo ${estacionActiva}`}
           </h2>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono px-2 py-1 bg-zinc-900 border border-zinc-700 text-amber-400 rounded">
+              {nivelActivo}
+            </span>
+            <span className="text-[10px] font-mono px-2 py-1 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded">
+              Rol: {rolActivo.toUpperCase()}
+            </span>
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto pr-1 sm:pr-2">
           {estacionActiva === 1 && (
             <DashboardPrincipal
-              onNavegarPestaña={(id) => setEstacionActiva(id)}
-              nombreOperador={rolActivo === "superuser" ? "Alex Castellanos (Superuser)" : "Operador en Turno"}
-              cargoOperador={rolActivo === "superuser" ? "Maestro Técnico / Administrador" : "Operario Autorizado"}
+              onNavegarPestaña={(id) => {
+                if (rolActivo === "ingeniero" && nivelActivo === "Nivel 1" && id === 115) {
+                  alert("⚠️ Acceso restringido: El Nivel 1 de Ingeniería no tiene permisos sobre protocolos de restauración del núcleo.");
+                  return;
+                }
+                if (rolActivo === "tecnico" && (nivelActivo === "Nivel 1" || nivelActivo === "Nivel 2") && id === 115) {
+                  alert("⚠️ Acceso restringido: Se requiere Técnico Nivel 3 para acceder a este módulo avanzado.");
+                  return;
+                }
+                setEstacionActiva(id);
+              }}
+              nombreOperador={rolActivo === "superuser" ? "Alex Castellanos (Creador)" : `Personal Autorizado (${rolActivo})`}
+              cargoOperador={rolActivo === "superuser" ? "Superuser Root" : `${rolActivo.toUpperCase()} ${nivelActivo}`}
             />
           )}
           
-          {estacionActiva === "SU99" && (
+          {estacionActiva === "SU99" && rolActivo === "superuser" && (
             <PanelSuperuserPage
               usuarios={usuariosAutorizados}
               onGuardarUsuario={guardarNuevoUsuarioSupabase}
               onActualizarEstadoUsuario={actualizarEstadoUsuario}
               alertas={alertasSistema}
               onAgregarAlerta={agregarAlerta}
-              esSuperuser={rolActivo === "superuser"}
+              esSuperuser={true}
             />
           )}
 
-          {estacionActiva === "SU4" && (
-            <div className="p-6 bg-zinc-950 border border-zinc-800 rounded-3xl font-mono space-y-4 shadow-2xl">
-              <div className="flex items-center gap-3 border-b border-zinc-800 pb-4">
-                <span className="text-2xl">🛡️</span>
-                <div>
-                  <h3 className="text-amber-400 font-black text-base uppercase">Dashboard SU4: Matriz de Permisos y Whitelist</h3>
-                  <p className="text-xs text-zinc-400">Control estricto de direcciones IP, hardware autorizado y listas blancas operativas.</p>
-                </div>
-              </div>
-            </div>
-          )}
           {estacionActiva === 0 && <PanelPedidosPestañas esSuperuser={rolActivo === "superuser"} />}
           {estacionActiva === 105 && <PanelProduccionesPestañas />}
-          {estacionActiva === 115 && (
+          {estacionActiva === 115 && rolActivo === "superuser" && (
             <PanelProtocolosOSAI
               usuarios={usuariosAutorizados}
               onRestaurarSistema={handleRestaurarSistema}

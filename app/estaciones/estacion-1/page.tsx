@@ -656,51 +656,56 @@ export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Pr
             <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
               <div>
                 <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                  Ficha de Receta Escalada y Pesaje de Ingredientes
+                  Ficha de Pesaje e Ingredientes (Receta Consolidada)
                 </h3>
                 <p className="text-[11px] text-zinc-400">
-                  Cálculo automático basado en el peso total de masa requerido ({pesoTotalLoteKg.toFixed(2)} Kg).
+                  Cantidades escaladas automáticamente según el factor de lote ({pesoTotalLoteKg.toFixed(2)} Kg).
                 </p>
               </div>
-              {!paso3Completado && (
-                <span className="text-[10px] font-mono text-red-400 font-bold">🔒 Candado Activo: Seleccione Pedidos</span>
-              )}
+              <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/40 px-2.5 py-1 rounded border border-cyan-800">
+                Factor Escala: {factorEscala.toFixed(4)}
+              </span>
             </div>
 
             <div className="w-full overflow-x-auto rounded-xl border border-zinc-800">
-              <table className="w-full text-left border-collapse text-xs font-mono">
-                <thead className="bg-zinc-900 text-zinc-300">
+              <table className="w-full text-left border-collapse text-[11px]">
+                <thead className="bg-zinc-900 text-zinc-300 font-mono">
                   <tr>
-                    <th className="p-3">Ingrediente</th>
-                    <th className="p-3 text-center">Base (g)</th>
+                    <th className="p-3">Ingrediente / Materia Prima</th>
+                    <th className="p-3 text-center">Gramos Base Receta</th>
                     <th className="p-3 text-center">% Panadero</th>
-                    <th className="p-3 text-right text-amber-400">Cantidad Escalada (g)</th>
-                    <th className="p-3 text-right text-emerald-400">Cantidad Escalada (Kg)</th>
+                    <th className="p-3 text-center font-bold text-amber-400">Gramos Calculados Lote</th>
+                    <th className="p-3 text-right font-bold text-emerald-400">Kilos Lote (Kg)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-900">
+                <tbody className="divide-y divide-zinc-900 font-mono">
                   {!paso3Completado ? (
                     <tr>
                       <td colSpan={5} className="p-6 text-center text-red-400 font-bold italic">
-                        🔒 Complete los pasos anteriores para calcular el pesaje de ingredientes.
+                        🔒 Seleccione al menos un pedido en el Paso 3 para calcular la fórmula de pesaje.
+                      </td>
+                    </tr>
+                  ) : ingredientesReceta.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-6 text-center text-zinc-500 italic">
+                        Seleccione un tipo de receta válido.
                       </td>
                     </tr>
                   ) : (
                     ingredientesReceta.map((ing) => {
                       const gramosBase = typeof ing.gramosOriginal === "number" ? ing.gramosOriginal : 0;
                       const gramosEscalados = gramosBase * factorEscala;
-                      const kgEscalados = gramosEscalados / 1000;
-
+                      const kilosEscalados = gramosEscalados / 1000;
                       return (
-                        <tr key={ing.id} className="hover:bg-zinc-900/40">
-                          <td className="p-3 font-bold text-zinc-200">{ing.descripcion}</td>
-                          <td className="p-3 text-center text-zinc-400">{ing.gramosOriginal !== "" ? ing.gramosOriginal : "—"}</td>
-                          <td className="p-3 text-center text-cyan-400">{ing.porcentajePanadero !== "" ? `${ing.porcentajePanadero}%` : "—"}</td>
-                          <td className="p-3 text-right font-bold text-amber-400">
-                            {gramosBase > 0 ? gramosEscalados.toFixed(1) : "A criterio"}
+                        <tr key={ing.id} className="hover:bg-zinc-900/50">
+                          <td className="p-3 font-sans font-semibold text-zinc-200">{ing.descripcion}</td>
+                          <td className="p-3 text-center text-zinc-400">{gramosBase > 0 ? `${gramosBase}g` : "A criterio"}</td>
+                          <td className="p-3 text-center text-cyan-400">{ing.porcentajePanadero ? `${ing.porcentajePanadero}%` : "—"}</td>
+                          <td className="p-3 text-center font-bold text-amber-400">
+                            {gramosBase > 0 ? `${gramosEscalados.toFixed(1)} g` : "—"}
                           </td>
                           <td className="p-3 text-right font-bold text-emerald-400">
-                            {gramosBase > 0 ? kgEscalados.toFixed(3) : "—"}
+                            {gramosBase > 0 ? `${kilosEscalados.toFixed(3)} Kg` : "—"}
                           </td>
                         </tr>
                       );
@@ -715,73 +720,63 @@ export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Pr
           <div className={`bg-zinc-950 p-6 rounded-2xl border space-y-4 shadow-xl transition-all ${
             !paso4Completado ? "opacity-40 border-red-500/50 bg-red-950/10" : "border-zinc-800 opacity-100"
           }`}>
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-              <div>
-                <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                  Firma y Validación de Responsable (Paso 5)
-                </h3>
-                <p className="text-[11px] text-zinc-400">
-                  Ingrese su cédula para autorizar la creación del lote y habilitar el tránsito a Amasado.
-                </p>
-              </div>
-              {!paso4Completado && (
-                <span className="text-[10px] font-mono text-red-400 font-bold">🔒 Candado Activo</span>
-              )}
-            </div>
+            <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider border-b border-zinc-800 pb-2">
+              Validación de Cédula y Firma de Responsable del Lote
+            </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-zinc-300 text-xs font-bold block uppercase">
-                  Cédula de Identidad del Operador:
-                </label>
+                <label className="text-xs text-zinc-300 block">Cédula de Identidad del Operario:</label>
                 <input
                   type="text"
+                  maxLength={10}
+                  disabled={!paso4Completado}
                   placeholder="Ej. 10433935"
                   value={cedulaResponsable}
-                  disabled={!paso4Completado}
                   onChange={(e) => manejarCedula(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs font-mono ${
-                    !paso4Completado ? "bg-zinc-900 text-zinc-600 cursor-not-allowed border-zinc-800" : "bg-zinc-900 text-amber-400 border-zinc-800 focus:outline-none focus:border-amber-500 font-bold"
+                  className={`w-full p-3 rounded-xl border font-mono text-sm ${
+                    !paso4Completado ? "bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed" : "bg-black text-amber-400 border-zinc-700 focus:outline-none focus:border-amber-500 font-bold tracking-widest"
                   }`}
                 />
               </div>
 
-              <div className="bg-zinc-900 p-3.5 rounded-xl border border-zinc-800 space-y-1">
-                <div className="text-[10px] text-zinc-400 uppercase">Responsable Validado:</div>
-                <div className={`text-xs font-bold ${paso5Completado ? "text-emerald-400" : "text-zinc-400"}`}>
+              <div className="space-y-1.5">
+                <label className="text-xs text-zinc-300 block">Operario Validado / Responsable:</label>
+                <div className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-bold text-emerald-400 flex items-center">
                   {nombreResponsable}
                 </div>
               </div>
             </div>
 
-            {/* BOTONERA DE ACCIÓN FINAL */}
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-zinc-900">
+            {/* BOTONES DE ACCIÓN FINAL */}
+            <div className="pt-4 border-t border-zinc-800 flex flex-col sm:flex-row gap-3 justify-end">
               <button
                 type="button"
                 onClick={registrarEnBitacora}
                 disabled={!paso5Completado}
-                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  !paso5Completado ? "bg-zinc-900 text-zinc-600 border border-zinc-800 cursor-not-allowed" : "bg-zinc-900 hover:bg-zinc-800 text-cyan-400 border border-cyan-500/40 cursor-pointer shadow"
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  !paso5Completado ? "bg-zinc-900 text-zinc-600 border border-zinc-800 cursor-not-allowed" : "bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-amber-400"
                 }`}
               >
-                📝 Registrar en Bitácora
+                📝 Registrar en Bitácora de Producción
               </button>
 
               <button
                 type="button"
                 onClick={avanzarSiguienteEstacion}
                 disabled={!paso5Completado}
-                className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                  !paso5Completado ? "bg-zinc-900 text-zinc-600 border border-zinc-800 cursor-not-allowed" : "bg-amber-500 hover:bg-amber-400 text-black border border-amber-400 cursor-pointer shadow-lg shadow-amber-500/20"
+                className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition shadow-lg cursor-pointer flex items-center justify-center gap-2 ${
+                  !paso5Completado ? "bg-zinc-900 text-zinc-600 border border-zinc-800 cursor-not-allowed" : "bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/20"
                 }`}
               >
-                🚀 Avanzar a Estación 2 (Amasado) →
+                <span>🚀 Transferir Lote a Estación 2 (Amasado)</span>
               </button>
             </div>
           </div>
 
         </div>
       </div>
+
     </div>
   );
 }

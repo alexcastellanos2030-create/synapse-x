@@ -10,13 +10,15 @@ interface SidebarProps {
   setSidebarMovilAbierta: (val: boolean) => void;
   estacionActiva: number;
   setEstacionActiva: (id: number) => void;
-  rolActivo: "superuser" | "admin" | "operario" | "cajera" | "supervisor";
+  rolActivo: "superuser" | "admin" | "operario" | "cajera" | "supervisor" | "ingeniero" | "tecnico";
   conmutarRol: () => void;
   temaVisual: "oscuro" | "claro" | "sistema";
   setTemaVisual: (tema: "oscuro" | "claro" | "sistema") => void;
   handleCerrarSesion: () => void;
   lotesActivos?: any[];
   onActivarSuperuser?: () => void;
+  superuserModoActivo?: boolean;
+  setSuperuserModoActivo?: (val: boolean) => void;
 }
 
 export default function Sidebar({
@@ -32,6 +34,8 @@ export default function Sidebar({
   setTemaVisual,
   handleCerrarSesion,
   onActivarSuperuser,
+  superuserModoActivo,
+  setSuperuserModoActivo,
 }: SidebarProps) {
   const [isCustomThemeOpen, setIsCustomThemeOpen] = useState<boolean>(false);
 

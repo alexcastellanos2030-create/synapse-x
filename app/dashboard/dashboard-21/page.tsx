@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import SidebarSuperuser from "../../components/SidebarSuperuser";
 import { ShieldAlert, Activity, Cpu, RefreshCw, AlertTriangle, Zap, Radio, Database, Gauge, Terminal } from "lucide-react";
 

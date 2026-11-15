@@ -2,470 +2,435 @@
 
 import React, { useState } from "react";
 import SidebarSuperuser from "../../components/SidebarSuperuser";
+import { Shield, Cpu, KeyRound, Terminal, Lock, CheckCircle2, AlertTriangle, RefreshCw, Database, DollarSign, Wrench, FileText, XCircle } from "lucide-react";
 
-interface LicenciaCliente {
+interface ClienteLicencia {
   id: string;
-  nombrePanaderia: string;
-  tokenLicencia: string;
-  ciudad: string;
-  versionOS: string;
-  estado: "Activa" | "Por Renovar" | "Suspendida";
-  ultimaSincronizacion: string;
+  razonSocial: string;
+  contacto: string;
+  macAsociada: string;
+  estado: "Activa" | "Suspendida" | "Bloqueada";
+  vencimiento: string;
+  nivelSoporte: "Básico" | "Medio" | "Avanzado (OTP Requerido)";
 }
 
-export default function Dashboard20MasterControl() {
-  const [tabActiva, setTabActiva] = useState<number>(1);
-  const [busqueda, setBusqueda] = useState<string>("");
-  const [sidebarColapsada, setSidebarColapsada] = useState<boolean>(false);
-  const [esClaro, setEsClaro] = useState<boolean>(false);
-  const [rolActual, setRolActual] = useState<string>("Superuser Master");
+export default function Dashboard20Page() {
+  const [superuserModoActivo, setSuperuserModoActivo] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("synapse_superuser_activo") !== "false";
+    }
+    return true;
+  });
 
-  // Datos de ejemplo de licencias externas conectadas al Núcleo Matriz
-  const [licencias, setLicencias] = useState<LicenciaCliente[]>([
-    {
-      id: "LIC-001",
-      nombrePanaderia: "Panadería y Pastelería El Sol",
-      tokenLicencia: "SYNEX-9982-SCL",
-      ciudad: "Santiago de Chile",
-      versionOS: "v2.6.0",
-      estado: "Activa",
-      ultimaSincronizacion: "14/11/2026 05:10",
-    },
-    {
-      id: "LIC-002",
-      nombrePanaderia: "Distribuidora Comercial Salam",
-      tokenLicencia: "SYNEX-7741-SCL",
-      ciudad: "Santiago de Chile",
-      versionOS: "v2.6.0",
-      estado: "Activa",
-      ultimaSincronizacion: "14/11/2026 04:55",
-    },
-    {
-      id: "LIC-003",
-      nombrePanaderia: "Cafetería y Obrador Gourmet",
-      tokenLicencia: "SYNEX-3320-VAL",
-      ciudad: "Valparaíso",
-      versionOS: "v2.5.8",
-      estado: "Por Renovar",
-      ultimaSincronizacion: "13/11/2026 22:30",
-    },
-    {
-      id: "LIC-004",
-      nombrePanaderia: "Industrial Panificadora del Sur",
-      tokenLicencia: "SYNEX-1105-CON",
-      ciudad: "Concepción",
-      versionOS: "v2.4.1",
-      estado: "Suspendida",
-      ultimaSincronizacion: "10/10/2026 12:15",
-    },
+  const [estacionActiva, setEstacionActiva] = useState<string | number>("SU20");
+  const [rolActivo, setRolActivo] = useState<"superuser" | "admin" | "operario" | "cajera" | "supervisor">("superuser");
+  const [temaVisual, setTemaVisual] = useState<"oscuro" | "claro" | "sistema">("oscuro");
+
+  // Pestañas internas del Hub Comercial
+  const [pestanaActiva, setPestanaActiva] = useState<"ADISION" | "MAC_BINDING" | "LICENCIAS" | "OTP_SOPORTE">("OTP_SOPORTE");
+
+  const [clientesLista] = useState<ClienteLicencia[]>([
+    { id: "LIC-2026-001", razonSocial: "Panificadora Industrial San Martín", contacto: "+56 9 8765 4321", macAsociada: "00:1A:2B:3C:4D:5E", estado: "Activa", vencimiento: "31/12/2026", nivelSoporte: "Avanzado (OTP Requerido)" },
+    { id: "LIC-2026-002", razonSocial: "Distribuidora Comercial Salam", contacto: "+56 9 1234 5678", macAsociada: "48:E2:44:12:88:99", estado: "Activa", vencimiento: "15/06/2027", nivelSoporte: "Medio" },
+    { id: "LIC-2026-003", razonSocial: "Alimentos y Masas del Sur SpA", contacto: "+56 9 5544 3322", macAsociada: "B8:27:EB:FF:EE:AA", estado: "Suspendida", vencimiento: "01/11/2026", nivelSoporte: "Básico" },
   ]);
 
-  const licenciasFiltradas = licencias.filter(
-    (l) =>
-      l.nombrePanaderia.toLowerCase().includes(busqueda.toLowerCase()) ||
-      l.tokenLicencia.toLowerCase().includes(busqueda.toLowerCase()) ||
-      l.ciudad.toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<ClienteLicencia>(clientesLista[0]);
+  
+  // Estados de Soporte OTP y Peritaje
+  const [otpGenerado, setOtpGenerado] = useState<string>("------");
+  const [otpIngresado, setOtpIngresado] = useState<string>("");
+  const [tunelActivo, setTunelActivo] = useState<boolean>(false);
+  
+  // Estados del Peritaje y Cotización Dinámica
+  const [sintomaCliente, setSintomaCliente] = useState<string>("El sistema se congeló al registrar lotes y la interfaz muestra error de red.");
+  const [nivelDaño, setNivelDaño] = useState<"NIVEL_1" | "NIVEL_2" | "NIVEL_3" | "NIVEL_4">("NIVEL_2");
+  const [reparacionEjecutada, setReparacionEjecutada] = useState<boolean>(false);
 
-  const cambiarEstadoLicencia = (id: string, nuevoEstado: "Activa" | "Por Renovar" | "Suspendida") => {
-    setLicencias(
-      licencias.map((l) => (l.id === id ? { ...l, estado: nuevoEstado } : l))
-    );
-    alert(`⚡ [MATRIZ DE SEGURIDAD]: Estado de la licencia ${id} actualizado a "${nuevoEstado}".`);
+  const [logsComerciales, setLogsComerciales] = useState<Array<{ id: number; time: string; tipo: string; mensaje: string }>>([
+    { id: 1, time: "06:00:10", tipo: "INFO", mensaje: "Núcleo Comercial inicializado. Base de datos de licencias sincronizada." },
+    { id: 2, time: "06:05:22", tipo: "SEC", mensaje: "Binding MAC verificado para Panificadora San Martín [00:1A:2B:3C:4D:5E]." }
+  ]);
+
+  const agregarLog = (tipo: string, mensaje: string) => {
+    const time = new Date().toLocaleTimeString();
+    setLogsComerciales(prev => [{ id: Date.now(), time, tipo, mensaje }, ...prev.slice(0, 14)]);
   };
 
-  // Función para recargar el sistema de forma limpia (equivale a Ctrl + Shift + R)
-  const ejecutarActualizacionSistema = () => {
-    if (typeof window !== "undefined") {
-      alert("🔄 [NÚCLEO SUPREMO]: Limpiando caché y recargando módulos del sistema...");
-      window.location.reload();
+  const generarCodigoOtp = () => {
+    const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+    setOtpGenerado(codigo);
+    agregarLog("OTP", `Token temporal generado para: ${clienteSeleccionado.razonSocial}`);
+  };
+
+  const validarYAbrirTunel = () => {
+    if (otpIngresado === otpGenerado && otpGenerado !== "------") {
+      setTunelActivo(true);
+      agregarLog("SUCCESS", `[TÚNEL SEGURO ESTABLECIDO] Conexión de peritaje remoto autorizada con ${clienteSeleccionado.razonSocial}.`);
+    } else {
+      alert("⛔ ERROR POKA-YOKE: Código OTP inválido o expirado.");
+      agregarLog("ERROR", `Intento fallido de túnel OTP para ${clienteSeleccionado.razonSocial}`);
     }
   };
 
-  // Función para verificar parámetros del sistema
-  const mostrarParametrosSistema = () => {
-    alert(
-      "⚙️ [DIAGNÓSTICO DEL SISTEMA SYNAPSE-X OSAI]:\n\n" +
-      "• Red de Sincronización: Estable (Supabase WebSocket OK)\n" +
-      "• Hosting Principal: Vercel Production Edge OK\n" +
-      "• Versión del Kernel: OSAI Industrial v2.6.0-MASTER\n" +
-      "• Modo de Operación: Zona Exclusiva de Superusuario (SU20)"
-    );
+  // Costos calculados según el nivel de daño
+  const obtenerCostoIngenieria = () => {
+    switch (nivelDaño) {
+      case "NIVEL_1": return { uf: 1.5, pesos: "$45.000 CLP", desc: "Restauración de archivos de configuración y parámetros de interfaz." };
+      case "NIVEL_2": return { uf: 3.5, pesos: "$120.000 CLP", desc: "Reparación de tablas relacionales de Base de Datos y sincronización." };
+      case "NIVEL_3": return { uf: 6.0, pesos: "$210.000 CLP", desc: "Reconstrucción de entorno local y mitigación por manipulación indebida." };
+      case "NIVEL_4": return { uf: 10.0, pesos: "$350.000 CLP", desc: "Rescate crítico global, recuperación de imagen y auditoría forense de nodo." };
+      default: return { uf: 2.0, pesos: "$60.000 CLP", desc: "Soporte técnico estándar." };
+    }
+  };
+
+  const infoCosto = obtenerCostoIngenieria();
+
+  const ejecutarReparacionCertificada = () => {
+    setReparacionEjecutada(true);
+    agregarLog("SUCCESS", `[REPARACIÓN COMPLETADA] Nodo de ${clienteSeleccionado.razonSocial} restaurado al 100%. Margen de error: 0.01%. Tarifa aplicada: ${infoCosto.pesos}`);
+    alert(`✅ Reparación certificada ejecutada con éxito. Costo del servicio registrado para facturación: ${infoCosto.pesos}.`);
+  };
+
+  const cancelarReparacion = () => {
+    setTunelActivo(false);
+    setReparacionEjecutada(false);
+    agregarLog("WARN", `Intervención y túnel cancelados por decisión comercial/operativa para ${clienteSeleccionado.razonSocial}.`);
+    alert("⚠️ Intervención cancelada. El túnel seguro ha sido cerrado sin alteraciones.");
   };
 
   return (
-    <div className={`min-h-screen ${esClaro ? "bg-zinc-100 text-zinc-900" : "bg-black text-white"} flex font-mono`}>
+    <div className="min-h-screen bg-black text-white flex font-mono select-none">
       
-      {/* BARRA SIDEBAR COMPLETA DE SUPERUSER */}
-      <aside className={`border-r transition-all duration-300 flex flex-col justify-between z-20 ${
-        esClaro ? "bg-white border-zinc-200" : "bg-zinc-950 border-zinc-800"
-      } ${sidebarColapsada ? "w-20" : "w-80"}`}>
+      <SidebarSuperuser
+        superuserModoActivo={superuserModoActivo}
+        setSuperuserModoActivo={(val) => {
+          setSuperuserModoActivo(val);
+          if (!val) window.location.href = "/estaciones/estacion-1";
+        }}
+        rolActivo={rolActivo}
+        estacionActiva={estacionActiva}
+        setEstacionActiva={(id) => {
+          setEstacionActiva(id);
+          if (id === "SU20" || id === 20) {
+            window.location.href = "/dashboard/dashboard-20";
+          } else if (id === "SU21" || id === 21) {
+            window.location.href = "/dashboard/dashboard-21";
+          } else if (id !== "SU99") {
+            window.location.href = `/estaciones/estacion-${id}`;
+          }
+        }}
+        conmutarRol={() => setRolActivo(rolActivo === "superuser" ? "operario" : "superuser")}
+        setTemaVisual={setTemaVisual}
+        handleCerrarSesion={() => {
+          localStorage.clear();
+          window.location.reload();
+        }}
+      />
+
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-6">
         
-        <div className="p-4 space-y-4 flex flex-col h-full overflow-hidden">
-          
-          {/* ENCABEZADO DE LA BARRA */}
-          <div className="flex items-center justify-between border-b pb-3 border-zinc-800">
-            {!sidebarColapsada && (
-              <div>
-                <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Synapse-X OSAI</div>
-                <div className="text-xs font-black tracking-wider">Área Superuser / Matriz</div>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setSidebarColapsada(!sidebarColapsada)}
-              className="p-2 bg-zinc-900 hover:bg-zinc-800 text-amber-400 rounded-lg border border-zinc-800 cursor-pointer flex items-center justify-center"
-              title={sidebarColapsada ? "Expandir barra" : "Colapsar barra"}
-            >
-              👑
-            </button>
+        {/* Cabecera */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-amber-500/40 pb-4 gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+              <h1 className="text-sm font-bold tracking-wider text-amber-400 uppercase">
+                Synapse-X OSAI Industrial // HUB 1: NÚCLEO COMERCIAL Y PERITAJE REMOTO
+              </h1>
+            </div>
+            <p className="text-zinc-400 text-[10px] mt-1">
+              Centro de diagnóstico integral, validación OTP, peritaje de fallas y tasación comercial de ingeniería.
+            </p>
           </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-xs text-amber-400 font-mono">
+              🔒 Protocolo Zero Trust & Peritaje Activo
+            </span>
+          </div>
+        </div>
 
-          {!sidebarColapsada && (
-            <>
-              {/* PUENTE DE CAMBIO DE ÁREA Y ROL */}
-              <div className="bg-zinc-900/80 p-3 rounded-xl border border-zinc-800 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-zinc-400 font-bold">Cambio de Área:</span>
-                  <button
-                    onClick={() => window.location.href = "/estaciones/estacion-1"}
-                    className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black font-black text-[10px] rounded cursor-pointer transition-all shadow"
-                    title="Pasar al Área de Operario / Usuario"
-                  >
-                    ⇄ Ir a Área Usuario
-                  </button>
-                </div>
+        {/* Pestañas de Navegación */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <button
+            onClick={() => setPestanaActiva("ADISION")}
+            className={`p-3 rounded-xl border text-left font-mono text-xs transition cursor-pointer flex items-center gap-2 ${
+              pestanaActiva === "ADISION" ? "bg-amber-500 text-black font-bold border-amber-400 shadow-lg" : "bg-zinc-950 text-zinc-300 border-zinc-800 hover:bg-zinc-900"
+            }`}
+          >
+            <span>👥</span>
+            <div className="truncate">
+              <div className="font-bold">Admisión</div>
+              <div className="text-[9px] opacity-80">Razón Social</div>
+            </div>
+          </button>
 
-                <div className="space-y-1">
-                  <span className="text-[10px] text-zinc-400 font-bold block">Rol Activo:</span>
-                  <select
-                    value={rolActual}
-                    onChange={(e) => setRolActual(e.target.value)}
-                    className="w-full bg-black text-amber-400 border border-zinc-700 rounded p-1.5 text-[11px] font-bold cursor-pointer"
-                  >
-                    <option value="Superuser Master">👑 Superuser Master</option>
-                    <option value="Ingeniero de Soporte">🛠️ Ingeniero de Soporte</option>
-                    <option value="Auditor de Licencias">🛡️ Auditor de Licencias</option>
-                  </select>
-                </div>
-              </div>
+          <button
+            onClick={() => setPestanaActiva("MAC_BINDING")}
+            className={`p-3 rounded-xl border text-left font-mono text-xs transition cursor-pointer flex items-center gap-2 ${
+              pestanaActiva === "MAC_BINDING" ? "bg-amber-500 text-black font-bold border-amber-400 shadow-lg" : "bg-zinc-950 text-zinc-300 border-zinc-800 hover:bg-zinc-900"
+            }`}
+          >
+            <span>💻</span>
+            <div className="truncate">
+              <div className="font-bold">2. Binding MAC</div>
+              <div className="text-[9px] opacity-80">Hardware y Llaves</div>
+            </div>
+          </button>
 
-              {/* LISTA DE LOS 21 DASHBOARDS CON PREFIJO SU */}
-              <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-                <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-1 pt-1">
-                  Módulos de Control Exclusivos (SU)
-                </div>
-                {Array.from({ length: 21 }, (_, i) => i + 1).map((num) => {
-                  const idModulo = `SU${num}`;
-                  const esDashboard20 = num === 20;
-                  return (
+          <button
+            onClick={() => setPestanaActiva("LICENCIAS")}
+            className={`p-3 rounded-xl border text-left font-mono text-xs transition cursor-pointer flex items-center gap-2 ${
+              pestanaActiva === "LICENCIAS" ? "bg-amber-500 text-black font-bold border-amber-400 shadow-lg" : "bg-zinc-950 text-zinc-300 border-zinc-800 hover:bg-zinc-900"
+            }`}
+          >
+            <span>🛡️</span>
+            <div className="truncate">
+              <div className="font-bold">3. Ciclo Licencia</div>
+              <div className="text-[9px] opacity-80">Estado y Seguridad</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setPestanaActiva("OTP_SOPORTE")}
+            className={`p-3 rounded-xl border text-left font-mono text-xs transition cursor-pointer flex items-center gap-2 ${
+              pestanaActiva === "OTP_SOPORTE" ? "bg-amber-500 text-black font-bold border-amber-400 shadow-lg" : "bg-zinc-950 text-zinc-300 border-zinc-800 hover:bg-zinc-900"
+            }`}
+          >
+            <span>🌐</span>
+            <div className="truncate">
+              <div className="font-bold">4. Soporte & Peritaje</div>
+              <div className="text-[9px] opacity-80">Túnel y Tasación Técnica</div>
+            </div>
+          </button>
+        </div>
+
+        {/* PESTAÑA 4: SOPORTE, PERITAJE Y COTIZACIÓN DE INGENIERÍA */}
+        {pestanaActiva === "OTP_SOPORTE" && (
+          <div className="space-y-6">
+
+            {/* Fila 1: Selección de Cliente y Autenticación OTP */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Selector de Cliente */}
+              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-3 shadow-xl">
+                <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider border-b border-zinc-800 pb-2">
+                  1. Seleccionar Licenciatario
+                </h3>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {clientesLista.map((cli) => (
                     <div
-                      key={idModulo}
-                      onClick={() => {
-                        if (num === 20) {
-                          window.location.href = "/dashboard/dashboard-20";
-                        } else if (num === 21) {
-                          window.location.href = "/dashboard-21";
-                        } else {
-                          alert(`Navegando al Módulo ${idModulo} (Control de Ingeniería).`);
-                        }
-                      }}
-                      className={`px-3 py-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
-                        esDashboard20
-                          ? "bg-amber-500/20 text-amber-400 font-black border border-amber-500/40 shadow"
-                          : "hover:bg-zinc-900 text-zinc-400 hover:text-white border border-transparent"
+                      key={cli.id}
+                      onClick={() => setClienteSeleccionado(cli)}
+                      className={`p-2.5 rounded-xl border cursor-pointer transition ${
+                        clienteSeleccionado.id === cli.id ? "bg-amber-500/10 border-amber-500 text-white" : "bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-900"
                       }`}
                     >
-                      <span>SU{num < 10 ? `0${num}` : num} {esDashboard20 ? "— Licencias y Soporte" : ""}</span>
-                      <span className="text-[9px] opacity-60">{esDashboard20 ? "Activo" : "Sistema"}</span>
+                      <div className="flex justify-between text-[11px] font-bold text-amber-300">
+                        <span>{cli.id}</span>
+                        <span>{cli.contacto}</span>
+                      </div>
+                      <div className="text-xs text-zinc-200 font-semibold truncate mt-0.5">{cli.razonSocial}</div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </>
-          )}
-        </div>
 
-        {/* BOTONERA INFERIOR */}
-        {!sidebarColapsada && (
-          <div className="p-3 border-t border-zinc-900 bg-zinc-950/90 space-y-2">
-            <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-              <button
-                onClick={ejecutarActualizacionSistema}
-                className="p-2 bg-zinc-900 hover:bg-zinc-800 text-amber-400 rounded border border-zinc-800 cursor-pointer text-center font-bold"
-                title="Recarga limpia del sistema"
-              >
-                Actualización
-              </button>
-              <button
-                onClick={() => setEsClaro(!esClaro)}
-                className="p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded border border-zinc-800 cursor-pointer text-center font-bold"
-              >
-                {esClaro ? "Modo Oscuro" : "Tema Claro"}
-              </button>
-              <button
-                onClick={() => alert("🎨 [ESTÉTICA]: Paleta industrial de alta contraste activa.")}
-                className="p-2 bg-zinc-900 hover:bg-zinc-800 text-cyan-400 rounded border border-zinc-800 cursor-pointer text-center font-bold"
-              >
-                Estética
-              </button>
-              <button
-                onClick={mostrarParametrosSistema}
-                className="p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded border border-zinc-800 cursor-pointer text-center font-bold"
-              >
-                Sistema
-              </button>
+              {/* Generador OTP */}
+              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-3 shadow-xl">
+                <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider border-b border-zinc-800 pb-2 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400" /> 2. Autenticación OTP Matriz
+                </h3>
+                <p className="text-[10px] text-zinc-400">
+                  Genere el token de 6 dígitos para que el cliente lo ingrese o dicte.
+                </p>
+                <div className="bg-black border border-zinc-900 p-3 rounded-xl text-center space-y-1">
+                  <div className="text-[9px] text-zinc-500 uppercase tracking-wider">Token Generado:</div>
+                  <div className="text-2xl font-black text-amber-400 tracking-widest">{otpGenerado}</div>
+                </div>
+                <button
+                  onClick={generarCodigoOtp}
+                  className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-xl transition cursor-pointer"
+                >
+                  Generar Nuevo Código OTP
+                </button>
+              </div>
+
+              {/* Conexión de Túnel */}
+              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-3 shadow-xl">
+                <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-wider border-b border-zinc-800 pb-2 flex items-center gap-1.5">
+                  <Terminal className="w-3.5 h-3.5 text-cyan-400" /> 3. Apertura de Túnel Seguro
+                </h3>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="Ingrese OTP Ej. 482910"
+                    value={otpIngresado}
+                    onChange={(e) => setOtpIngresado(e.target.value.replace(/\D/g, ""))}
+                    className="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-amber-400 text-sm font-bold tracking-widest focus:outline-none focus:border-cyan-500"
+                  />
+                  <div className="flex justify-between items-center text-[10px] bg-zinc-900 p-2 rounded-lg">
+                    <span className="text-zinc-400">Estado:</span>
+                    <span className={tunelActivo ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
+                      {tunelActivo ? "🟢 CONECTADO" : "🔴 CERRADO"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={validarYAbrirTunel}
+                    disabled={tunelActivo}
+                    className={`w-full py-2 rounded-xl text-xs font-bold transition ${
+                      tunelActivo ? "bg-zinc-900 text-zinc-600 cursor-not-allowed" : "bg-cyan-500 hover:bg-cyan-400 text-black cursor-pointer"
+                    }`}
+                  >
+                    {tunelActivo ? "Túnel Activo" : "Validar y Abrir Túnel"}
+                  </button>
+                </div>
+              </div>
+
             </div>
-            <button
-              onClick={() => alert("🔒 [SESIÓN]: Sesión de superusuario finalizada de forma segura.")}
-              className="w-full py-2 bg-red-950/40 hover:bg-red-900/50 text-red-400 border border-red-500/30 rounded text-[11px] font-bold cursor-pointer transition-all"
-            >
-              Cierre de Sesión
-            </button>
+
+            {/* Fila 2: Consola de Peritaje e Ingeniería (Solo activa si el túnel está abierto) */}
+            {tunelActivo && (
+              <div className="bg-zinc-950 border border-cyan-500/40 rounded-2xl p-5 space-y-5 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Wrench className="w-5 h-5 text-cyan-400 animate-spin" />
+                    <h2 className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
+                      Estación de Peritaje Remoto & Diagnóstico Multinivel // Nodo: {clienteSeleccionado.razonSocial}
+                    </h2>
+                  </div>
+                  <span className="px-2.5 py-1 bg-cyan-950 text-cyan-400 border border-cyan-800 text-[10px] rounded font-bold">
+                    Túnel Bidireccional Seguro
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Declaración del Cliente vs Realidad del Sistema */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-zinc-400 block mb-1">Reporte / Síntoma Declarado por el Cliente:</label>
+                      <textarea
+                        rows={2}
+                        value={sintomaCliente}
+                        onChange={(e) => setSintomaCliente(e.target.value)}
+                        className="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500 font-mono"
+                      />
+                    </div>
+
+                    <div className="bg-black border border-zinc-900 rounded-xl p-3 space-y-2">
+                      <div className="text-[10px] text-emerald-400 font-bold uppercase flex items-center gap-1">
+                        <span>🔍 Telemetría de Peritaje Real (Escaneo Automático):</span>
+                      </div>
+                      <div className="text-[11px] text-zinc-300 font-mono space-y-1">
+                        <div>Integridad Base de Datos: <strong className="text-amber-400">Tabla de lotes con corrupción leve por corte eléctrico.</strong></div>
+                        <div>Estado de Memoria y Kernel: <strong className="text-emerald-400">Estable (Node.js v22 operativo).</strong></div>
+                        <div>Causa Raíz Detectada: <strong className="text-cyan-400">Manipulación de registros locales por apagado abrupto de terminal.</strong></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Selector de Nivel de Daño y Tasación Comercial */}
+                  <div className="space-y-3">
+                    <label className="text-xs text-zinc-400 block">Clasificación Técnica del Daño (Peritaje):</label>
+                    <select
+                      value={nivelDaño}
+                      onChange={(e) => setNivelDaño(e.target.value as any)}
+                      className="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-amber-400 font-bold focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="NIVEL_1">Nivel 1: Ajuste de Configuración y Parámetros (Básico)</option>
+                      <option value="NIVEL_2">Nivel 2: Reparación de Base de Datos y Sincronización (Medio)</option>
+                      <option value="NIVEL_3">Nivel 3: Reconstrucción de Entorno por Mal Uso (Avanzado)</option>
+                      <option value="NIVEL_4">Nivel 4: Rescate Crítico de Emergencia Global (Catastrófico)</option>
+                    </select>
+
+                    {/* Tarjeta de Cotización Dinámica */}
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-2">
+                      <div className="flex justify-between items-center border-b border-zinc-800 pb-1.5">
+                        <span className="text-xs text-zinc-400">Valor Propuesto de Ingeniería:</span>
+                        <strong className="text-amber-400 text-sm font-black">{infoCosto.pesos}</strong>
+                      </div>
+                      <p className="text-[10px] text-zinc-400">
+                        <strong>Alcance:</strong> {infoCosto.desc}
+                      </p>
+                      <div className="text-[9px] text-emerald-400 pt-1">
+                        💡 <em>Justificación comercial: Evita mermas por 8 horas de planta detenida valoradas en más de $800.000 CLP.</em>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botones de Decisión Final */}
+                <div className="pt-3 border-t border-zinc-800 flex flex-col md:flex-row gap-3 justify-end">
+                  <button
+                    onClick={cancelarReparacion}
+                    className="px-4 py-2.5 bg-zinc-900 hover:bg-rose-950/60 border border-zinc-700 hover:border-rose-800 text-zinc-300 hover:text-rose-400 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    <span>Cancelar y Rechazar Intervención</span>
+                  </button>
+
+                  <button
+                    onClick={ejecutarReparacionCertificada}
+                    disabled={reparacionEjecutada}
+                    className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition shadow-lg flex items-center justify-center gap-2 cursor-pointer ${
+                      reparacionEjecutada ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-emerald-500 hover:bg-emerald-400 text-black"
+                    }`}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{reparacionEjecutada ? "Reparación Certificada y Ejecutada" : "Ejecutar Reparación Completa y Certificada"}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
-      </aside>
 
-      {/* CONTENIDO PRINCIPAL */}
-      <div className="flex-1 p-4 md:p-6 overflow-y-auto">
-        <div className="max-w-7xl mx-auto space-y-6">
+        {/* Pestañas 1, 2 y 3 */}
+        {pestanaActiva !== "OTP_SOPORTE" && (
+          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-4 shadow-xl">
+            <h2 className="text-xs font-bold text-amber-400 uppercase tracking-wider border-b border-zinc-800 pb-2">
+              {pestanaActiva === "ADISION" ? "👥 Sub-portal de Admisión y Registro Comercial" : pestanaActiva === "MAC_BINDING" ? "💻 Sub-portal de Binding MAC y Criptografía de Hardware" : "🛡️ Sub-portal de Ciclo de Licencia y Estados"}
+            </h2>
+            <p className="text-zinc-400 text-xs">
+              Módulo operativo interconectado con el Kernel de Synapse-X OSAI Industrial bajo la directriz de 0.01% margen de error.
+            </p>
+          </div>
+        )}
 
-          {/* ENCABEZADO SUPREMO CON ENLACES RÁPIDOS DE INFRAESTRUCTURA (SUPABASE, VERCEL, GITHUB) */}
-          <div className={`border p-6 rounded-2xl shadow-2xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 ${
-            esClaro ? "bg-white border-zinc-300" : "bg-zinc-950 border-zinc-800"
-          }`}>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="bg-amber-500 text-black font-black text-[10px] px-2 py-0.5 rounded">
-                  SU20 // LICENCIAS Y SOPORTE
+        {/* Bitácora Comercial */}
+        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-3 shadow-xl">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+            <h2 className="text-zinc-300 font-bold uppercase text-xs flex items-center gap-2">
+              <Database className="w-4 h-4 text-amber-400" /> Bitácora de Auditoría y Facturación de Ingeniería
+            </h2>
+            <button onClick={() => setLogsComerciales([])} className="text-[10px] text-zinc-500 hover:text-white underline cursor-pointer">
+              Limpiar Bitácora
+            </button>
+          </div>
+
+          <div className="bg-black border border-zinc-900 rounded-xl p-3 h-32 overflow-y-auto space-y-1.5 font-mono text-[10px]">
+            {logsComerciales.map((log) => (
+              <div key={log.id} className="flex items-start gap-2 border-b border-zinc-900/50 pb-1">
+                <span className="text-zinc-500 shrink-0">[{log.time}]</span>
+                <span className={`px-1 rounded text-[9px] font-bold shrink-0 ${
+                  log.tipo === 'ERROR' ? 'bg-rose-950 text-rose-400 border border-rose-800' :
+                  log.tipo === 'WARN' ? 'bg-amber-950 text-amber-400 border border-amber-800' :
+                  log.tipo === 'SUCCESS' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' :
+                  'bg-zinc-900 text-zinc-300 border border-zinc-700'
+                }`}>
+                  {log.tipo}
                 </span>
-                <h1 className="text-base md:text-lg font-black text-amber-400 tracking-wider uppercase">
-                  Synapse-X OSAI Industrial — Núcleo Supremo
-                </h1>
+                <span className="text-zinc-300 break-all">{log.mensaje}</span>
               </div>
-              <p className="text-xs text-zinc-400 font-sans mt-1">
-                Centro de mando centralizado para la supervisión, licenciamiento y telemetría de toda la red industrial externa.
-              </p>
-            </div>
-
-            {/* BOTONES DE ACCESO RÁPIDO A INFRAESTRUCTURA (SUPABASE, VERCEL, GITHUB) */}
-            <div className="flex flex-wrap items-center gap-2">
-              <a
-                href="https://supabase.com/dashboard"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-400 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all shadow"
-                title="Abrir panel de Supabase en nueva pestaña"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Supabase ↗
-              </a>
-
-              <a
-                href="https://vercel.com/dashboard"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all shadow"
-                title="Abrir panel de Vercel en nueva pestaña"
-              >
-                <span>▲</span> Vercel ↗
-              </a>
-
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all shadow"
-                title="Abrir repositorio de GitHub en nueva pestaña"
-              >
-                <span>📂</span> GitHub ↗
-              </a>
-            </div>
+            ))}
           </div>
-
-          {/* SISTEMA DE 10 MICROBOTONES EN UNA SOLA LÍNEA HORIZONTAL */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 w-full">
-            {[
-              { id: 1, nombre: "01. Directorio", tipo: "Activa" },
-              { id: 2, nombre: "02. Soporte", tipo: "Activa" },
-              { id: 3, nombre: "03. Versiones", tipo: "Activa" },
-              { id: 4, nombre: "04. Telemetría", tipo: "Standby" },
-              { id: 5, nombre: "05. Comercial", tipo: "Standby" },
-              { id: 6, nombre: "06. Seguridad", tipo: "Standby" },
-              { id: 7, nombre: "07. Auditoría", tipo: "Standby" },
-              { id: 8, nombre: "08. Alertas", tipo: "Standby" },
-              { id: 9, nombre: "09. Respaldos", tipo: "Standby" },
-              { id: 10, nombre: "10. Analítica", tipo: "Standby" },
-            ].map((t) => {
-              const esActiva = t.tipo === "Activa";
-              const seleccionada = tabActiva === t.id;
-
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTabActiva(t.id)}
-                  className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap border flex-shrink-0 ${
-                    seleccionada
-                      ? "bg-amber-500 text-black border-amber-400 shadow-md font-black"
-                      : esActiva
-                      ? "bg-zinc-900 text-zinc-300 border-zinc-800 hover:bg-zinc-800"
-                      : "bg-zinc-950 text-zinc-500 border-zinc-900 hover:bg-zinc-900"
-                  }`}
-                  title={`${t.nombre} (${t.tipo})`}
-                >
-                  <span className="opacity-60 text-[8px] mr-1">[{t.tipo[0]}]</span>
-                  {t.nombre}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* CONTENIDO DE LA PESTAÑA 1: DIRECTORIO GLOBAL DE LICENCIAS (BUSCADOR) */}
-          {tabActiva === 1 && (
-            <div className={`border p-6 rounded-2xl shadow-xl space-y-4 ${esClaro ? "bg-white border-zinc-300" : "bg-zinc-950 border-zinc-800"}`}>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                <div>
-                  <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider">
-                    🔍 Buscador y Directorio Global de Licencias Externas
-                  </h3>
-                  <p className="text-xs text-zinc-400">
-                    Gestión y control remoto de todas las panaderías operando con el software estándar.
-                  </p>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Buscar por panadería, token o ciudad..."
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  className="bg-zinc-900 border border-zinc-800 text-xs px-4 py-2 rounded-xl text-white w-full md:w-80 focus:outline-none focus:border-amber-500 font-mono"
-                />
-              </div>
-
-              <div className="w-full overflow-x-auto rounded-xl border border-zinc-800">
-                <table className="w-full text-left border-collapse text-xs font-mono">
-                  <thead className="bg-zinc-900 text-zinc-300">
-                    <tr>
-                      <th className="p-3">ID Licencia</th>
-                      <th className="p-3">Cliente / Panadería</th>
-                      <th className="p-3">Token Único</th>
-                      <th className="p-3">Ubicación</th>
-                      <th className="p-3 text-center">Versión OS</th>
-                      <th className="p-3 text-center">Estado</th>
-                      <th className="p-3 text-right">Acciones Remotas</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-900 text-zinc-300">
-                    {licenciasFiltradas.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="p-6 text-center text-zinc-500 italic">
-                          No se encontraron licencias registradas con los criterios de búsqueda.
-                        </td>
-                      </tr>
-                    ) : (
-                      licenciasFiltradas.map((lic) => (
-                        <tr key={lic.id} className="hover:bg-zinc-900/40">
-                          <td className="p-3 font-bold text-amber-400">{lic.id}</td>
-                          <td className="p-3 font-semibold text-white">{lic.nombrePanaderia}</td>
-                          <td className="p-3 text-cyan-400">{lic.tokenLicencia}</td>
-                          <td className="p-3 text-zinc-400">{lic.ciudad}</td>
-                          <td className="p-3 text-center text-zinc-300">{lic.versionOS}</td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                              lic.estado === "Activa" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
-                              lic.estado === "Por Renovar" ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" :
-                              "bg-red-500/20 text-red-400 border border-red-500/30"
-                            }`}>
-                              {lic.estado}
-                            </span>
-                          </td>
-                          <td className="p-3 text-right space-x-2">
-                            {lic.estado !== "Activa" && (
-                              <button
-                                onClick={() => cambiarEstadoLicencia(lic.id, "Activa")}
-                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold cursor-pointer"
-                              >
-                                Activar
-                              </button>
-                            )}
-                            {lic.estado !== "Suspendida" && (
-                              <button
-                                onClick={() => cambiarEstadoLicencia(lic.id, "Suspendida")}
-                                className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-[10px] font-bold cursor-pointer"
-                              >
-                                Suspender
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* CONTENIDO DE LA PESTAÑA 2: MESA DE SOPORTE Y DIAGNÓSTICO */}
-          {tabActiva === 2 && (
-            <div className={`border p-6 rounded-2xl shadow-xl space-y-4 ${esClaro ? "bg-white border-zinc-300" : "bg-zinc-950 border-zinc-800"}`}>
-              <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider">
-                🛠️ Mesa de Soporte y Diagnóstico Técnico Remoto
-              </h3>
-              <p className="text-xs text-zinc-400">
-                Panel de recepción de incidencias, errores de estación y reportes enviados por las instancias externas.
-              </p>
-              <div className="p-8 border border-dashed border-zinc-800 rounded-xl text-center space-y-2 bg-zinc-900/20">
-                <div className="text-2xl">📡</div>
-                <div className="font-bold text-zinc-300 text-xs">Sin incidencias críticas reportadas en la red</div>
-                <p className="text-[11px] text-zinc-500">Las alertas de errores en terminales cliente aparecerán aquí en tiempo real.</p>
-              </div>
-            </div>
-          )}
-
-          {/* CONTENIDO DE LA PESTAÑA 3: CONTROL DE VERSIONES Y UPDATES */}
-          {tabActiva === 3 && (
-            <div className={`border p-6 rounded-2xl shadow-xl space-y-4 ${esClaro ? "bg-white border-zinc-300" : "bg-zinc-950 border-zinc-800"}`}>
-              <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider">
-                📦 Control de Versiones y Despliegues Estándar (Golden Master)
-              </h3>
-              <p className="text-xs text-zinc-400">
-                Monitoreo del estado de sincronización de código y parches aplicados a las panaderías externas.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800 space-y-1">
-                  <div className="text-[10px] text-zinc-400">Versión Matriz Actual</div>
-                  <div className="text-sm font-bold text-amber-400">OSAI Industrial v2.6.0</div>
-                  <div className="text-[10px] text-emerald-400">● Desplegado en Vercel (Production)</div>
-                </div>
-                <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800 space-y-1">
-                  <div className="text-[10px] text-zinc-400">Instancias Actualizadas</div>
-                  <div className="text-sm font-bold text-cyan-400">2 / 4 Clientes</div>
-                  <div className="text-[10px] text-zinc-500">50% de adopción de red</div>
-                </div>
-                <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800 space-y-1">
-                  <div className="text-[10px] text-zinc-400">Protocolo de Actualización</div>
-                  <div className="text-sm font-bold text-emerald-400">Automático vía Git/Vercel</div>
-                  <div className="text-[10px] text-zinc-500">Estandarización intacta</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* CONTENIDO DE LAS PESTAÑAS EN STANDBY (4 AL 10) */}
-          {tabActiva >= 4 && (
-            <div className="border border-cyan-500/30 bg-cyan-950/10 p-8 rounded-2xl shadow-xl text-center space-y-3">
-              <div className="text-3xl">🛡️</div>
-              <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wider">
-                Módulo Estructural en Standby (Pestaña {tabActiva} Preconfigurada)
-              </h3>
-              <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                Esta sección está conectada al núcleo maestro y lista para el momento en que desees desarrollar las nuevas funciones que tienes en mente.
-              </p>
-            </div>
-          )}
-
         </div>
+
       </div>
+
     </div>
   );
 }

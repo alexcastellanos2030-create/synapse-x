@@ -2,22 +2,22 @@
 
 import React, { useState, useEffect } from "react";
 import { UsuarioRegistrado } from "../page";
-import { supabase } from "../lib/supabase"; // Asegúrate de tener la ruta correcta a supabase
+import { supabase } from "../lib/supabase";
 
 interface OperarioLoginProps {
   usuarios: UsuarioRegistrado[];
-  onLoginSuccess: (rol: "admin" | "operario" | "cajera" | "supervisor" | "superuser", cedula: string, clave: string) => void;
+  onLoginSuccess: (rol: "admin" | "operario" | "cajera" | "supervisor" | "superuser" | "ingeniero" | "tecnico", cedula: string, clave: string) => void;
   onVolverSuperuser: () => void;
 }
 
-export default function OperarioLogin({ usuarios: propsUsuarios, onLoginSuccess, onVolverSuperuser }: OperarioLoginProps) {
+export default function UsuarioLogin({ usuarios: propsUsuarios, onLoginSuccess, onVolverSuperuser }: OperarioLoginProps) {
   const [usuariosLocal, setUsuariosLocal] = useState<UsuarioRegistrado[]>(propsUsuarios);
   const [inputCedula, setInputCedula] = useState("");
   const [inputClave, setInputClave] = useState("");
   const [nombreDetectado, setNombreDetectado] = useState("••••••••••••••••");
   const [errorMsg, setErrorMsg] = useState("");
 
-  // FORZAR CARGA DIRECTA DE SUPABASE PARA QUE EN INCÓGNITO O MÓVIL SE VEAN LOS 5 USUARIOS
+  // FORZAR CARGA DIRECTA DE SUPABASE PARA QUE EN INCÓGNITO O MÓVIL SE VEAN LOS USUARIOS
   useEffect(() => {
     async function sincronizarUsuariosNube() {
       try {
@@ -79,6 +79,7 @@ export default function OperarioLogin({ usuarios: propsUsuarios, onLoginSuccess,
       
       <div className="absolute top-4 right-4 z-50">
         <button
+          type="button"
           onClick={onVolverSuperuser}
           className="px-4 py-2 bg-slate-800 text-amber-400 border border-amber-500/40 rounded-xl text-xs font-mono font-bold shadow-lg hover:bg-slate-700 transition-all cursor-pointer"
         >

@@ -23,14 +23,54 @@ export default function PanelSuperuserPage({
 }: PanelSuperuserProps) {
   const [pestañaActiva, setPestañaActiva] = useState<number>(1);
 
+  // Estados de formulario unificado
   const [nombre, setNombre] = useState("");
   const [cedula, setCedula] = useState("");
   const [clave, setClave] = useState("");
   const [verClave, setVerClave] = useState(false);
-  const [rol, setRol] = useState<"operario" | "cajera" | "supervisor" | "admin" | "superuser">("operario");
+  const [rol, setRol] = useState<"operario" | "cajera" | "supervisor" | "admin" | "superuser" | "ingeniero" | "tecnico">("operario");
+  const [licenciaCliente, setLicenciaCliente] = useState<string>("Licencia Matriz Synexis-X (Santiago)");
 
   const [busqueda, setBusqueda] = useState("");
   const [cedulaEditando, setCedulaEditando] = useState<string | null>(null);
+
+  // Estado para el control manual de acceso total a las hijas (Aleanny y Albany)
+  const [accesoTotalHijas, setAccesoTotalHijas] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("synapse_autorizacion_total_hijas") === "true";
+    }
+    return false;
+  });
+
+  const handleToggleAccesoHijas = () => {
+    const nuevoEstado = !accesoTotalHijas;
+    setAccesoTotalHijas(nuevoEstado);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("synapse_autorizacion_total_hijas", String(nuevoEstado));
+    }
+    onAgregarAlerta({
+      id: `ALT-${Date.now()}`,
+      modulo: "Panel Superuser / Accesos",
+      tipo: "INFO",
+      nivel: 1,
+      mensaje: `Superusuario ${nuevoEstado ? "OTORGÓ" : "REVOCÓ"} acceso total manual a Superusers 2 y 3 (Aleanny y Albany).`,
+      timestamp: new Date().toLocaleTimeString(),
+    });
+    alert(`🛡️ Protocolo de Respaldo: Acceso total para Aleanny y Albany ${nuevoEstado ? "HABILITADO" : "BLOQUEADO (Modo Solo Ver)"}.`);
+  };
+
+  // Generador de URL exclusiva por rol y cédula (Con blindaje de portal)
+  const obtenerUrlExclusiva = (rolTarget: string) => {
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://synapse-x-ai-os.vercel.app";
+    const cedulaParam = cedula.trim() ? `&ci=${cedula.trim()}` : "";
+    return `${baseUrl}/?portal=${rolTarget}${cedulaParam}`;
+  };
+
+  const copiarUrlPortales = (rolTarget: string) => {
+    const urlFinal = obtenerUrlExclusiva(rolTarget);
+    navigator.clipboard.writeText(urlFinal);
+    alert(`📋 URL exclusiva para portal [${rolTarget.toUpperCase()}] copiada al portapapeles.`);
+  };
 
   const usuariosFiltrados = usuarios.filter(
     (u) =>
@@ -38,11 +78,14 @@ export default function PanelSuperuserPage({
       u.cedula.includes(busqueda)
   );
 
+  const staffCoreGlobal = usuarios.filter((u) => u.rol === "ingeniero" || u.rol === "tecnico" || u.rol === "superuser");
+  const personalOperativoComercial = usuarios.filter((u) => u.rol === "operario" || u.rol === "cajera" || u.rol === "supervisor" || u.rol === "admin");
+
   const iniciarEdicion = (u: UsuarioRegistrado) => {
     setNombre(u.nombre);
     setCedula(u.cedula);
     setClave(u.clave);
-    setRol(u.rol);
+    setRol(u.rol as any);
     setCedulaEditando(u.cedula);
     alert(`✏️ Modo Edición Activo para: ${u.nombre}. Modifique los campos y haga clic en Actualizar.`);
   };
@@ -75,64 +118,9 @@ export default function PanelSuperuserPage({
     }
   };
 
-  const handleVer = () => {
-    alert(`👁️ Modo Visualización Activa: Total de usuarios en la nube: ${usuarios.length}`);
-  };
-
-  const handleEditar = () => {
-    alert(`✏️ Modo Edición: Utilice el botón "Editar" al lado de cada usuario en la lista inferior.`);
-  };
-
-  const handleCrear = () => {
-    if (!nombre.trim() || !cedula.trim() || !clave.trim()) {
-      alert("⚠️ Complete los campos de nombre, cédula y clave para crear el registro.");
-      return;
-    }
-    registrarManual();
-  };
-
-  const handleEliminar = () => {
-    const cedulaEliminar = prompt("Ingrese la Cédula del usuario que desea gestionar:");
-    if (cedulaEliminar) {
-      const target = usuarios.find(u => u.cedula === cedulaEliminar);
-      if (target) {
-        eliminarUsuarioDirecto(target.cedula, target.nombre);
-      } else {
-        alert(`⚠️ No se encontró ningún usuario con la cédula ${cedulaEliminar}`);
-      }
-    }
-  };
-
-  const handleImprimir = () => {
-    window.print();
-  };
-
-  const handleDescargar = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(usuarios, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `synapse_usuarios_nube_${Date.now()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    alert("📥 Datos de usuarios descargados exitosamente en formato JSON.");
-  };
-
-  const handleGuardar = () => {
-    alert("💾 Todos los registros están sincronizados directamente en Supabase.");
-    onAgregarAlerta({
-      id: `ALT-${Date.now()}`,
-      modulo: "Panel Superuser / Accesos",
-      tipo: "INFO",
-      nivel: 1,
-      mensaje: `Superusuario ejecutó punto de control en la nube.`,
-      timestamp: new Date().toLocaleTimeString(),
-    });
-  };
-
   const registrarManual = () => {
     if (!nombre.trim() || !cedula.trim() || !clave.trim()) {
-      alert("⚠️ Complete todos los campos.");
+      alert("⚠️ Complete todos los campos requeridos.");
       return;
     }
 
@@ -155,7 +143,7 @@ export default function PanelSuperuserPage({
       timestamp: new Date().toLocaleTimeString(),
     });
 
-    alert(`✅ Usuario ${nombre} guardado y sincronizado en la nube con éxito.`);
+    alert(`✅ Usuario ${nombre} registrado con éxito bajo la licencia: ${licenciaCliente}.`);
     cancelarEdicion();
   };
 
@@ -169,16 +157,12 @@ export default function PanelSuperuserPage({
   );
 
   const pestañasConfig = [
-    { id: 1, nombre: "Nuevo usuario" },
-    { id: 2, nombre: "Auditoría de Planta" },
-    { id: 3, nombre: "Parámetros y Recetas" },
-    { id: 4, nombre: "Métricas y Lotes" },
-    { id: 5, nombre: "Control Sanitario" },
-    { id: 6, nombre: "Pestaña 6" },
-    { id: 7, nombre: "Pestaña 7" },
-    { id: 8, nombre: "Pestaña 8" },
-    { id: 9, nombre: "Pestaña 9" },
-    { id: 10, nombre: "Pestaña 10" },
+    { id: 1, nombre: "⚙️ Staff Core (Ingenieros & Técnicos)" },
+    { id: 2, nombre: "🏢 Personal Operativo & Licencias" },
+    { id: 3, nombre: "📊 Auditoría de Planta" },
+    { id: 4, nombre: "⚙️ Parámetros y Recetas" },
+    { id: 5, nombre: "📈 Métricas y Lotes" },
+    { id: 6, nombre: "🛡️ Control Sanitario" },
   ];
 
   return (
@@ -186,15 +170,13 @@ export default function PanelSuperuserPage({
       
       <header className="bg-slate-900 p-5 rounded-xl border border-amber-500/40 shadow-xl">
         <h1 className="text-lg md:text-xl font-black text-amber-400 tracking-wide uppercase flex items-center gap-2">
-          👑 Panel de Control y Gobernanza Superuser (Control de Usuarios)
+          👑 Panel de Control y Gobernanza Superuser (Arquitectura Core & Licencias)
         </h1>
       </header>
 
       <nav className="flex overflow-x-auto space-x-2 border-b border-slate-800 pb-1 scrollbar-thin">
         {pestañasConfig.map((p) => {
           const isActive = pestañaActiva === p.id;
-          const isBlank = p.id >= 6;
-
           return (
             <button
               key={p.id}
@@ -203,8 +185,6 @@ export default function PanelSuperuserPage({
               className={`px-4 py-2.5 rounded-t-lg font-bold text-xs whitespace-nowrap transition-all border-t border-x ${
                 isActive
                   ? "bg-slate-900 border-amber-500/60 text-amber-400 border-b-2 border-b-amber-400 shadow-md"
-                  : isBlank
-                  ? "bg-slate-950/40 border-slate-800 text-slate-500 hover:text-slate-300 hover:bg-slate-900/50"
                   : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
               }`}
             >
@@ -214,225 +194,153 @@ export default function PanelSuperuserPage({
         })}
       </nav>
 
+      {/* PESTAÑA 1: STAFF CORE GLOBAL (INGENIEROS Y TÉCNICOS) */}
       {pestañaActiva === 1 && (
         <div className="space-y-6">
+          
+          <div className="bg-[#111827] border border-cyan-500/40 p-5 rounded-2xl space-y-3 shadow-xl">
+            <h3 className="text-xs font-black text-cyan-400 uppercase tracking-wide flex items-center gap-2">
+              ⚙️ Creación y Asignación de Staff Core Global (Ingenieros y Técnicos de Soporte)
+            </h3>
+            <p className="text-[11px] text-slate-300">
+              Este personal opera en un dominio completamente independiente al personal operativo de planta. Solo usted (como Creador) otorga sus credenciales y su URL exclusiva de acceso con blindaje de portal.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             <div className="bg-[#111827] rounded-2xl border border-slate-800 shadow-xl overflow-hidden p-5 space-y-5">
               <div className="border-b border-slate-800 pb-3 flex justify-between items-center">
-                <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider flex items-center gap-2">
-                  {cedulaEditando ? `✏️ Editando Usuario (CI: ${cedulaEditando})` : "Registro de nuevo usuario"}
+                <h2 className="text-sm font-black text-cyan-400 uppercase tracking-wider">
+                  {cedulaEditando ? `✏️ Editando Staff (CI: ${cedulaEditando})` : "Registro de Ingeniero / Técnico Core"}
                 </h2>
                 {cedulaEditando && (
-                  <button
-                    type="button"
-                    onClick={cancelarEdicion}
-                    className="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-1 rounded border border-rose-500/30 hover:bg-rose-500/30"
-                  >
-                    Cancelar Edición
+                  <button type="button" onClick={cancelarEdicion} className="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-1 rounded border border-rose-500/30">
+                    Cancelar
                   </button>
                 )}
               </div>
 
               <form onSubmit={registrar} className="space-y-4">
-                
-                <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
-                  <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80 pb-1.5">
-                    Información Personal
-                  </h3>
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-slate-300">
-                      Nombre Completo:
-                    </label>
-                    <input
-                      type="text"
-                      value={nombre}
-                      onChange={(e) => setNombre(e.target.value)}
-                      placeholder="Ingrese aquí su nombre"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-slate-300">
-                      Cédula de Identidad:
-                    </label>
-                    <input
-                      type="text"
-                      value={cedula}
-                      onChange={(e) => setCedula(e.target.value.replace(/\D/g, ""))}
-                      placeholder="Ingrese aquí su cédula"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-bold text-slate-300">Nombre del Ingeniero o Técnico:</label>
+                  <input
+                    type="text"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    placeholder="Ej. Ing. Carlos Mendoza"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none focus:border-cyan-500"
+                  />
                 </div>
 
-                <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
-                  <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80 pb-1.5">
-                    Credenciales de Acceso
-                  </h3>
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-slate-300">
-                      Clave de Acceso:
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={verClave ? "text" : "password"}
-                        value={clave}
-                        onChange={(e) => setClave(e.target.value)}
-                        placeholder="Ingrese aquí su clave"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 pr-9 text-slate-100 focus:outline-none focus:border-amber-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setVerClave(!verClave)}
-                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-amber-400 transition-colors text-sm"
-                      >
-                        {verClave ? "👁️" : "🙈"}
-                      </button>
-                    </div>
-                  </div>
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-bold text-slate-300">Cédula de Identidad:</label>
+                  <input
+                    type="text"
+                    value={cedula}
+                    onChange={(e) => setCedula(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Número de cédula"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-cyan-300 font-mono font-bold focus:outline-none focus:border-cyan-500"
+                  />
                 </div>
 
-                <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
-                  <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80 pb-1.5">
-                    Asignación de Perfil Estándar
-                  </h3>
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-bold text-slate-300">Clave de Acceso:</label>
+                  <input
+                    type={verClave ? "text" : "password"}
+                    value={clave}
+                    onChange={(e) => setClave(e.target.value)}
+                    placeholder="Clave de seguridad"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-bold text-slate-300">Asignar Perfil Core:</label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setRol("operario")}
+                      onClick={() => setRol("ingeniero")}
                       className={`py-2 rounded-lg font-bold border text-[11px] transition-all ${
-                        rol === "operario"
-                          ? "bg-amber-500 text-slate-950 border-amber-400 font-extrabold shadow-md"
-                          : "bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800"
+                        rol === "ingeniero" ? "bg-cyan-500 text-slate-950 border-cyan-400 font-extrabold shadow-md" : "bg-slate-950 text-slate-400 border-slate-800"
                       }`}
                     >
-                      👷 Operario Planta
+                      ⚙️ Ingeniero Sistemas
                     </button>
                     <button
                       type="button"
-                      onClick={() => setRol("cajera")}
+                      onClick={() => setRol("tecnico")}
                       className={`py-2 rounded-lg font-bold border text-[11px] transition-all ${
-                        rol === "cajera"
-                          ? "bg-amber-500 text-slate-950 border-amber-400 font-extrabold shadow-md"
-                          : "bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800"
+                        rol === "tecnico" ? "bg-amber-600 text-slate-950 border-amber-500 font-extrabold shadow-md" : "bg-slate-950 text-slate-400 border-slate-800"
                       }`}
                     >
-                      💰 Cajera (POS)
+                      🔧 Técnico Soporte
                     </button>
+                  </div>
+                </div>
+
+                {/* URL EXCLUSIVA DE ACCESO */}
+                <div className="bg-slate-950 p-3 rounded-xl border border-cyan-500/40 space-y-1.5">
+                  <label className="text-[10px] font-black text-cyan-400 uppercase tracking-wider block">
+                    🔗 URL Exclusiva para este perfil ({rol.toUpperCase()}):
+                  </label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      readOnly
+                      value={obtenerUrlExclusiva(rol)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono text-[10px] select-all"
+                    />
                     <button
                       type="button"
-                      onClick={() => setRol("supervisor")}
-                      className={`py-2 rounded-lg font-bold border text-[11px] transition-all ${
-                        rol === "supervisor"
-                          ? "bg-amber-500 text-slate-950 border-amber-400 font-extrabold shadow-md"
-                          : "bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800"
-                      }`}
+                      onClick={() => copiarUrlPortales(rol)}
+                      className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black px-3 py-2 rounded-lg text-xs transition-all cursor-pointer shrink-0"
                     >
-                      🛡️ Supervisor Turno
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRol("admin")}
-                      className={`py-2 rounded-lg font-bold border text-[11px] transition-all ${
-                        rol === "admin"
-                          ? "bg-amber-500 text-slate-950 border-amber-400 font-extrabold shadow-md"
-                          : "bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800"
-                      }`}
-                    >
-                      💼 Admin Local
+                      📋 Copiar
                     </button>
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  className={`w-full py-3 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all cursor-pointer ${
-                    cedulaEditando
-                      ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
-                      : "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                  }`}
+                  className="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all cursor-pointer"
                 >
-                  {cedulaEditando ? "💾 ACTUALIZAR REGISTRO" : "⚡ REGISTRAR Y ASIGNAR PERFIL"}
+                  ⚡ REGISTRAR STAFF CORE GLOBAL
                 </button>
               </form>
             </div>
 
             <div className="bg-[#111827] rounded-2xl border border-slate-800 shadow-xl overflow-hidden flex flex-col p-5 space-y-4">
-              <div className="border-b border-slate-800 pb-3 space-y-3">
-                <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">
-                  📋 Personal Activo ({usuariosFiltrados.length})
-                </h2>
+              <h2 className="text-sm font-black text-cyan-400 uppercase tracking-wider border-b border-slate-800 pb-3">
+                📋 Listado de Staff Core Registrado ({staffCoreGlobal.length})
+              </h2>
 
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    🔍
-                  </span>
-                  <input
-                    type="text"
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                    placeholder="Buscar por nombre o cédula..."
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500 text-xs"
-                  />
-                  {busqueda && (
-                    <button
-                      type="button"
-                      onClick={() => setBusqueda("")}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-                {usuariosFiltrados.length === 0 ? (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                {staffCoreGlobal.length === 0 ? (
                   <div className="text-slate-500 italic text-center py-8">
-                    No se encontraron usuarios en la nube con ese criterio.
+                    No hay ingenieros ni técnicos registrados en el core global.
                   </div>
                 ) : (
-                  usuariosFiltrados.map((u, i) => (
-                    <div
-                      key={i}
-                      className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
-                    >
+                  staffCoreGlobal.map((u, i) => (
+                    <div key={i} className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
                       <div>
                         <div className="font-bold text-slate-200">{u.nombre}</div>
                         <div className="text-[10px] font-mono text-slate-400">
-                          CI: {u.cedula} | Perfil: <span className="text-amber-400 font-bold uppercase">{u.rol}</span>
+                          CI: {u.cedula} | Rol: <span className="text-cyan-400 font-bold uppercase">{u.rol}</span>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => iniciarEdicion(u)}
-                          className="px-2.5 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-[10px] font-bold hover:bg-amber-500/30 transition-all cursor-pointer"
+                          className="px-2.5 py-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg text-[10px] font-bold"
                         >
                           ✏️ Editar
                         </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nuevoEstado = !u.bloqueado;
-                            onActualizarEstadoUsuario(u.cedula, nuevoEstado);
-                          }}
-                          className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                            u.bloqueado
-                              ? "bg-rose-500 text-white border border-rose-400 animate-pulse"
-                              : "bg-emerald-500 text-slate-950 border border-emerald-400"
-                          }`}
-                        >
-                          {u.bloqueado ? "🔴 Bloqueado" : "🟢 Activo"}
-                        </button>
-
                         <button
                           type="button"
                           onClick={() => eliminarUsuarioDirecto(u.cedula, u.nombre)}
-                          className="px-2.5 py-1.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded-lg text-[10px] font-bold hover:bg-rose-500/30 transition-all cursor-pointer"
+                          className="px-2.5 py-1.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded-lg text-[10px] font-bold"
                         >
                           🗑️ Eliminar
                         </button>
@@ -443,82 +351,255 @@ export default function PanelSuperuserPage({
               </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {esSuperuser && (
-            <div className="bg-[#111827] rounded-2xl border border-amber-500/40 shadow-xl p-5 space-y-3">
-              <div className="border-b border-slate-800 pb-2 flex items-center justify-between">
-                <h3 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-2">
-                  🔒 Panel de Edición y Control Operativo (Restringido a Superuser)
+      {/* PESTAÑA 2: PERSONAL OPERATIVO & LICENCIAS (MATRIZ VS CLIENTES) */}
+      {pestañaActiva === 2 && (
+        <div className="space-y-6">
+          
+          {/* GOBERNANZA DE RESPALDO HIJAS */}
+          <div className="bg-[#111827] border border-slate-800 p-5 rounded-2xl space-y-3 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-2">
+                  🛡️ Protocolo de Respaldo: Superusers 2 y 3 (Aleanny y Albany)
                 </h3>
-                <span className="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded text-[9px] font-mono border border-amber-500/30">
-                  MODO PRIVILEGIADO
-                </span>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Por defecto operan en modo <strong className="text-amber-400">Solo Ver</strong>. Interruptor manual de gobernanza general.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleAccesoHijas}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold font-mono transition-all border cursor-pointer flex items-center gap-2 shadow-lg shrink-0 ${
+                  accesoTotalHijas ? 'bg-emerald-600 text-slate-950 border-emerald-400 font-extrabold' : 'bg-slate-900 text-amber-400 border-amber-500/40'
+                }`}
+              >
+                <span>{accesoTotalHijas ? '🟢 Acceso Total Habilitado' : '🔒 Modo Solo Ver Activo'}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div className="bg-[#111827] rounded-2xl border border-slate-800 shadow-xl overflow-hidden p-5 space-y-4">
+              <div className="border-b border-slate-800 pb-3 flex justify-between items-center">
+                <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">
+                  {cedulaEditando ? `✏️ Editando Operario (CI: ${cedulaEditando})` : "Registro de Personal Operativo / Licencia"}
+                </h2>
+                {cedulaEditando && (
+                  <button type="button" onClick={cancelarEdicion} className="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-1 rounded border border-rose-500/30">
+                    Cancelar
+                  </button>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 pt-1">
-                <button type="button" onClick={handleVer} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold py-2 px-3 rounded-lg transition-all text-center flex items-center justify-center gap-1 cursor-pointer shadow">👁️ Ver</button>
-                <button type="button" onClick={handleEditar} className="bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/40 font-bold py-2 px-3 rounded-lg transition-all text-center flex items-center justify-center gap-1 cursor-pointer shadow">✏️ Editar</button>
-                <button type="button" onClick={handleCrear} className="bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold py-2 px-3 rounded-lg transition-all text-center flex items-center justify-center gap-1 cursor-pointer shadow">➕ Crear</button>
-                <button type="button" onClick={handleEliminar} className="bg-slate-900 hover:bg-slate-800 text-rose-400 border border-rose-500/40 font-bold py-2 px-3 rounded-lg transition-all text-center flex items-center justify-center gap-1 cursor-pointer shadow">🗑️ Eliminar</button>
-                <button type="button" onClick={handleImprimir} className="bg-slate-900 hover:bg-slate-800 text-sky-300 border border-sky-500/40 font-bold py-2 px-3 rounded-lg transition-all text-center flex items-center justify-center gap-1 cursor-pointer shadow">🖨️ Imprimir</button>
-                <button type="button" onClick={handleDescargar} className="bg-slate-900 hover:bg-slate-800 text-indigo-300 border border-indigo-500/40 font-bold py-2 px-3 rounded-lg transition-all text-center flex items-center justify-center gap-1 cursor-pointer shadow">📥 Descargar</button>
-                <button type="button" onClick={handleGuardar} className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2 px-3 rounded-lg transition-all text-center flex items-center justify-center gap-1 cursor-pointer shadow col-span-2 sm:col-span-1 md:col-span-1">💾 Guardar</button>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-[#111827] rounded-2xl border border-slate-800 shadow-xl p-5 space-y-4">
-            <div className="border-b border-slate-800 pb-3">
-              <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">
-                🚨 Portal de Alertas y Telemetría del Sistema ({alertasSuperuser.length})
-              </h2>
-            </div>
-            <div className="w-full h-52 bg-slate-950 rounded-xl border border-slate-800 p-4 overflow-y-auto font-mono text-[11px] space-y-2 shadow-inner">
-              {alertasSuperuser.length === 0 ? (
-                <div className="text-slate-500 italic text-center py-12">
-                  Sin eventos ni alertas registradas en el control de acceso y gobernanza.
+              <form onSubmit={registrar} className="space-y-4">
+                
+                {/* SELECTOR DE LICENCIA / CLIENTE COMERCIAL */}
+                <div className="space-y-1 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <label className="block text-[11px] font-bold text-amber-400">
+                    🏢 Asignar a Licencia / Empresa Cliente:
+                  </label>
+                  <select
+                    value={licenciaCliente}
+                    onChange={(e) => setLicenciaCliente(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 text-xs focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="Licencia Matriz Synexis-X (Santiago)">Licencia Matriz Synexis-X (Santiago)</option>
+                    <option value="Cliente Comercial: Panadería San Martín SpA">Cliente Comercial: Panadería San Martín SpA</option>
+                    <option value="Cliente Comercial: Delicias del Sur Ltda.">Cliente Comercial: Delicias del Sur Ltda.</option>
+                    <option value="Cliente Comercial: Industrial F alimentos">Cliente Comercial: Industrial F alimentos</option>
+                  </select>
                 </div>
-              ) : (
-                alertasSuperuser.map((alt) => (
-                  <div key={alt.id} className="p-2.5 rounded-lg bg-slate-900 border border-slate-800/80 flex justify-between items-center">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-black ${alt.tipo === "BLOQUEO" ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" : "bg-amber-500/20 text-amber-300"}`}>
-                          {alt.tipo}
-                        </span>
-                        <span className="text-slate-300 font-bold">{alt.mensaje}</span>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-bold text-slate-300">Nombre del Empleado:</label>
+                  <input
+                    type="text"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    placeholder="Nombre completo"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-bold text-slate-300">Cédula de Identidad:</label>
+                  <input
+                    type="text"
+                    value={cedula}
+                    onChange={(e) => setCedula(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Cédula de identidad"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-bold text-slate-300">Clave de Acceso:</label>
+                  <input
+                    type={verClave ? "text" : "password"}
+                    value={clave}
+                    onChange={(e) => setClave(e.target.value)}
+                    placeholder="Clave"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-bold text-slate-300">Perfil Comercial / Operativo:</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRol("operario")}
+                      className={`py-2 rounded-lg font-bold border text-[11px] transition-all ${
+                        rol === "operario" ? "bg-amber-500 text-slate-950 border-amber-400 font-extrabold shadow-md" : "bg-slate-950 text-slate-400 border-slate-800"
+                      }`}
+                    >
+                      👷 Operario Planta
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRol("cajera")}
+                      className={`py-2 rounded-lg font-bold border text-[11px] transition-all ${
+                        rol === "cajera" ? "bg-amber-500 text-slate-950 border-amber-400 font-extrabold shadow-md" : "bg-slate-950 text-slate-400 border-slate-800"
+                      }`}
+                    >
+                      💰 Cajera (POS)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRol("supervisor")}
+                      className={`py-2 rounded-lg font-bold border text-[11px] transition-all ${
+                        rol === "supervisor" ? "bg-amber-500 text-slate-950 border-amber-400 font-extrabold shadow-md" : "bg-slate-950 text-slate-400 border-slate-800"
+                      }`}
+                    >
+                      🛡️ Supervisor Turno
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRol("admin")}
+                      className={`py-2 rounded-lg font-bold border text-[11px] transition-all ${
+                        rol === "admin" ? "bg-amber-500 text-slate-950 border-amber-400 font-extrabold shadow-md" : "bg-slate-950 text-slate-400 border-slate-800"
+                      }`}
+                    >
+                      💼 Admin Local
+                    </button>
+                  </div>
+                </div>
+
+                {/* URL EXCLUSIVA DE OPERARIO */}
+                <div className="bg-slate-950 p-3 rounded-xl border border-amber-500/40 space-y-1.5">
+                  <label className="text-[10px] font-black text-amber-400 uppercase tracking-wider block">
+                    🔗 URL Exclusiva para este Operario/Admin:
+                  </label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      readOnly
+                      value={obtenerUrlExclusiva("usuario")}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-amber-300 font-mono text-[10px] select-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copiarUrlPortales("usuario")}
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-2 rounded-lg text-xs transition-all cursor-pointer shrink-0"
+                    >
+                      📋 Copiar
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all cursor-pointer"
+                >
+                  ⚡ REGISTRAR PERSONAL COMERCIAL / OPERATIVO
+                </button>
+              </form>
+            </div>
+
+            <div className="bg-[#111827] rounded-2xl border border-slate-800 shadow-xl overflow-hidden flex flex-col p-5 space-y-4">
+              <div className="border-b border-slate-800 pb-3 space-y-3">
+                <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">
+                  📋 Personal Comercial y de Planta ({personalOperativoComercial.length})
+                </h2>
+
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">🔍</span>
+                  <input
+                    type="text"
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    placeholder="Buscar por nombre o cédula..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-slate-200 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
+                {personalOperativoComercial.length === 0 ? (
+                  <div className="text-slate-500 italic text-center py-8">
+                    No se encontró personal operativo registrado.
+                  </div>
+                ) : (
+                  personalOperativoComercial.map((u, i) => (
+                    <div key={i} className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                      <div>
+                        <div className="font-bold text-slate-200">{u.nombre}</div>
+                        <div className="text-[10px] font-mono text-slate-400">
+                          CI: {u.cedula} | Perfil: <span className="text-amber-400 font-bold uppercase">{u.rol}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => iniciarEdicion(u)}
+                          className="px-2.5 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-[10px] font-bold"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => eliminarUsuarioDirecto(u.cedula, u.nombre)}
+                          className="px-2.5 py-1.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded-lg text-[10px] font-bold"
+                        >
+                          🗑️ Eliminar
+                        </button>
                       </div>
                     </div>
-                    <span className="text-slate-500 text-[10px]">{alt.timestamp}</span>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {pestañaActiva === 2 && (
-        <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 space-y-6">
-          <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">📊 Auditoría de Planta</h2>
-          <p className="text-xs text-slate-400">Total de operarios sincronizados en la nube: {usuarios.length}</p>
-        </div>
-      )}
+      {/* PESTAÑAS 3 A 6: AUDITORÍA Y MÓDULOS DE PLANTA */}
       {pestañaActiva === 3 && (
-        <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 space-y-6">
-          <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">⚙️ Parámetros y Recetas</h2>
+        <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 space-y-4">
+          <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">📊 Auditoría General de Licencias y Planta</h2>
+          <p className="text-xs text-slate-400">Total global de registros en la nube (Core + Comercial): {usuarios.length}</p>
         </div>
       )}
       {pestañaActiva === 4 && (
-        <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 space-y-6">
-          <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">📈 Métricas y Lotes</h2>
+        <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 space-y-4">
+          <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">⚙️ Parámetros y Recetas del Sistema</h2>
         </div>
       )}
       {pestañaActiva === 5 && (
         <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 space-y-6">
-          <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">🛡️ Control Sanitario</h2>
+          <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">📈 Métricas y Lotes de Producción</h2>
         </div>
       )}
+      {pestañaActiva === 6 && (
+        <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 space-y-6">
+          <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider">🛡️ Control Sanitario y POES</h2>
+        </div>
+      )}
+
     </div>
   );
 }
