@@ -138,14 +138,13 @@ const generar60PedidosPrueba = (): PedidoOperativo[] => {
 };
 
 export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Props) {
-  const [estacionActiva, setEstacionActiva] = useState<number>(1);
+  const [estacionActiva, setEstacionActiva] = useState<string | number>(1);
   const [amasadoraSeleccionada, setAmasadoraSeleccionada] = useState<string>("Seleccionar batidora");
   const [recetaSeleccionada, setRecetaSeleccionada] = useState<string>("Seleccionar tipo de masa");
   const [pedidosCola, setPedidosCola] = useState<PedidoOperativo[]>(generar60PedidosPrueba());
   const [pedidosSeleccionados, setPedidosSeleccionados] = useState<string[]>([]);
   const [acordeonDetalleAbierto, setAcordeonDetalleAbierto] = useState<boolean>(true);
   
-  // Estados de control de barra y modos
   const [sidebarColapsada, setSidebarColapsada] = useState<boolean>(false);
   const [sidebarMovilAbierta, setSidebarMovilAbierta] = useState<boolean>(false);
   const [rolActivo, setRolActivo] = useState<"superuser" | "admin" | "operario" | "cajera" | "supervisor">("superuser");
@@ -336,8 +335,6 @@ export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Pr
     setNombreResponsable("Ingrese su cédula aquí para validar...");
   };
 
-  const pedidosPendientesCola = pedidosCola.filter(p => p.estado === "En Cola");
-
   return (
     <div className="min-h-screen bg-black text-white flex font-mono">
       
@@ -350,9 +347,11 @@ export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Pr
           estacionActiva={estacionActiva}
           setEstacionActiva={(id) => {
             setEstacionActiva(id);
-            if (id === 20) {
-              window.location.href = "/dashboard-20";
-            } else if (id !== 99) {
+            if (id === 20 || id === "SU20") {
+              window.location.href = "/dashboard/dashboard-20";
+            } else if (id === 21 || id === "SU21") {
+              window.location.href = "/dashboard-21";
+            } else if (id !== 99 && id !== "SU99") {
               window.location.href = `/estaciones/estacion-${id}`;
             }
           }}
@@ -366,7 +365,7 @@ export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Pr
           setSidebarColapsada={setSidebarColapsada}
           sidebarMovilAbierta={sidebarMovilAbierta}
           setSidebarMovilAbierta={setSidebarMovilAbierta}
-          estacionActiva={estacionActiva}
+          estacionActiva={estacionActiva as number}
           setEstacionActiva={(id) => {
             setEstacionActiva(id);
             if (id === 99) {
@@ -404,7 +403,6 @@ export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Pr
               </span>
             </div>
 
-            {/* 12 BOTONES DE LAS ESTACIONES */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-2 pt-1">
               {estacionesListado.map((est) => (
                 <button
@@ -424,7 +422,7 @@ export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Pr
             </div>
           </div>
 
-          {/* CONTENEDOR 2: SISTEMA DE CANDADOS Y BLOQUEO DE RUTA (ROJO, AMARILLO Y VERDE) */}
+          {/* CONTENEDOR 2: SISTEMA DE CANDADOS Y BLOQUEO DE RUTA */}
           <div className="border border-zinc-800 bg-zinc-950 p-5 rounded-2xl shadow-xl space-y-3">
             <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
               <span>🔒</span> Sistema de Candados y Bloqueo de Ruta que debe Seguir el Operador
@@ -522,7 +520,7 @@ export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Pr
             </div>
           </div>
 
-          {/* CONTENEDOR DE PEDIDOS (DESGLOSE DE CANTIDAD, SEGURIDAD Y BODEGA) */}
+          {/* CONTENEDOR DE PEDIDOS */}
           <div className={`bg-zinc-950 p-5 rounded-2xl border space-y-3 shadow-xl transition-all ${
             !paso2Completado ? "opacity-40 border-red-500/50 bg-red-950/10" : "border-zinc-800 opacity-100"
           }`}>
@@ -595,7 +593,6 @@ export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Pr
                           <td className="p-3 text-zinc-300">{p.producto}</td>
                           <td className="p-3 text-zinc-400">{p.tipoMasa}</td>
                           <td className="p-3 text-center text-cyan-400 font-bold">{p.gramajePiezaG}g</td>
-                          
                           <td className="p-3 text-center font-mono text-[10px]">
                             <span className="text-amber-400" title="Cantidad Solicitada">{p.cantidadSolicitada} unids</span>
                             <span className="text-zinc-500"> + </span>
@@ -603,11 +600,9 @@ export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Pr
                             <span className="text-zinc-500"> - </span>
                             <span className="text-red-400" title="Stock en Bodega">{p.existenciaBodega} bodega</span>
                           </td>
-
                           <td className="p-3 text-center font-bold text-amber-400 text-xs">
                             {p.cantidadNetaFabricar} unids
                           </td>
-
                           <td className="p-3 text-right font-bold text-emerald-400">{pesoKg.toFixed(2)} Kg</td>
                         </tr>
                       );
@@ -658,197 +653,130 @@ export default function Estacion1({ onLoteCreado, esClaro = false }: Estacion1Pr
           <div className={`bg-zinc-950 p-6 rounded-2xl border space-y-4 shadow-xl transition-all ${
             !paso3Completado ? "opacity-40 border-red-500/50 bg-red-950/10" : "border-zinc-800 opacity-100"
           }`}>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-zinc-800 pb-4 gap-2">
-              <div className="space-y-1">
-                <h3 className="text-xl md:text-3xl font-black text-amber-400 uppercase tracking-wider">
-                  ⚖️ PESAJE DE INGREDIENTES
+            <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+              <div>
+                <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                  Ficha de Receta Escalada y Pesaje de Ingredientes
                 </h3>
-                <p className="text-xs md:text-sm font-bold text-cyan-400 font-mono uppercase tracking-wide">
-                  (Receta Maestra — Fórmula Base: {recetaSeleccionada})
+                <p className="text-[11px] text-zinc-400">
+                  Cálculo automático basado en el peso total de masa requerido ({pesoTotalLoteKg.toFixed(2)} Kg).
                 </p>
               </div>
               {!paso3Completado && (
-                <span className="text-[10px] font-mono text-red-400 font-bold">🔒 BLOQUEADO</span>
+                <span className="text-[10px] font-mono text-red-400 font-bold">🔒 Candado Activo: Seleccione Pedidos</span>
               )}
-            </div>
-
-            {!paso3Completado ? (
-              <div className="p-6 text-center text-red-400 italic text-xs border border-dashed border-red-500/30 rounded-xl">
-                🔒 Candado activo: Seleccione al menos un pedido para calcular los gramajes exactos de la receta.
-              </div>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-zinc-800">
-                <table className="w-full text-left border-collapse text-[11px]">
-                  <thead className="bg-zinc-900 text-zinc-300 font-mono">
-                    <tr>
-                      <th className="p-3 w-16 text-center">Ítem</th>
-                      <th className="p-3">DESCRIPCIÓN INGREDIENTE</th>
-                      <th className="p-3 w-36 text-center">gr (Receta Base)</th>
-                      <th className="p-3 w-32 text-center">PORC %</th>
-                      <th className="p-3 w-40 text-right bg-emerald-950/50 text-emerald-300">GRAMOS SISTEMA</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-900 font-mono">
-                    {ingredientesReceta.map((ing) => {
-                      const gOrig = typeof ing.gramosOriginal === "number" ? ing.gramosOriginal : 0;
-                      const gramosCalculadosSistema = gOrig > 0 ? gOrig * factorEscala : 0;
-
-                      return (
-                        <tr key={ing.id} className="hover:bg-zinc-900/40">
-                          <td className="p-3 text-center text-zinc-500">#{ing.id}</td>
-                          <td className="p-3">
-                            <input
-                              type="text"
-                              value={ing.descripcion}
-                              onChange={(e) => actualizarIngredienteLocal(ing.id, "descripcion", e.target.value)}
-                              className="w-full bg-zinc-900 p-1.5 rounded border border-zinc-800 font-bold text-zinc-100"
-                            />
-                          </td>
-                          <td className="p-3 text-center">
-                            <input
-                              type="number"
-                              value={ing.gramosOriginal}
-                              onChange={(e) => actualizarIngredienteLocal(ing.id, "gramosOriginal", e.target.value === "" ? "" : Number(e.target.value))}
-                              className="w-28 text-center bg-zinc-900 p-1.5 rounded border border-zinc-800 text-amber-400 font-bold"
-                            />
-                          </td>
-                          <td className="p-3 text-center">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={ing.porcentajePanadero}
-                              onChange={(e) => actualizarIngredienteLocal(ing.id, "porcentajePanadero", e.target.value === "" ? "" : Number(e.target.value))}
-                              className="w-24 text-center bg-zinc-900 p-1.5 rounded border border-zinc-800 text-cyan-400 font-bold"
-                            />
-                          </td>
-                          <td className="p-3 text-right font-bold bg-emerald-950/20 text-emerald-400 text-xs">
-                            {gramosCalculadosSistema > 0 ? `${gramosCalculadosSistema.toFixed(1)} g` : "0.0 g"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* CONTENEDOR: FIRMA DEL OPERARIO Y 2 BOTONES DE ACCIÓN */}
-          <div className={`bg-zinc-950 p-5 rounded-2xl border space-y-4 shadow-xl transition-all ${
-            !paso4Completado ? "opacity-40 border-red-500/50 bg-red-950/10" : "border-zinc-800 opacity-100"
-          }`}>
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-              <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                👤 Firma del Operario y Validación de Lote
-              </h3>
-              {!paso4Completado && (
-                <span className="text-[10px] font-mono text-red-400 font-bold">🔒 BLOQUEADO</span>
-              )}
-            </div>
-
-            {!paso4Completado ? (
-              <div className="p-6 text-center text-red-400 italic text-xs border border-dashed border-red-500/30 rounded-xl">
-                🔒 Candado activo: Complete los pasos anteriores para habilitar la firma de cierre de estación.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-zinc-400 block mb-1">Campo de Cédula:</label>
-                    <input
-                      type="text"
-                      value={cedulaResponsable}
-                      onChange={(e) => manejarCedula(e.target.value)}
-                      placeholder="Ej: 10433935"
-                      className="w-full bg-zinc-900 text-xs text-zinc-100 border border-zinc-800 rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-zinc-400 block mb-1">Campo de Nombre en Automático:</label>
-                    <div className="w-full bg-zinc-900 text-xs text-amber-400 font-bold border border-zinc-800 rounded-lg px-3 py-2 flex items-center h-[34px]">
-                      {nombreResponsable}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-zinc-400 block mb-1">Hora y Fecha del Sistema:</label>
-                    <div className="w-full bg-zinc-900 text-xs text-emerald-400 font-bold border border-zinc-800 rounded-lg px-3 py-2 flex items-center h-[34px] font-mono">
-                      {fechaHoraActual || "Sincronizando..."}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2 BOTONES DE ACCIÓN INDUSTRIAL */}
-                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={registrarEnBitacora}
-                    className="px-5 py-3 bg-zinc-900 hover:bg-zinc-800 text-amber-400 font-bold text-xs rounded-xl border border-amber-500/30 transition-all cursor-pointer flex items-center justify-center gap-2 shadow"
-                  >
-                    <span>📝</span> Registrar accion en la Bitacora
-                  </button>
-                  <button
-                    type="button"
-                    onClick={avanzarSiguienteEstacion}
-                    className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black text-xs rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <span>🚀</span> Avanzar a la Siguiente Estacion
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* CONTENEDOR DINÁMICO: COLA DE PEDIDOS POR ELABORAR */}
-          <div className="border border-zinc-800 bg-zinc-950 p-5 rounded-2xl shadow-xl space-y-3">
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-              <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
-                <span>📋</span> Cola de Pedidos por Elaborar en Planta ({pedidosPendientesCola.length} en espera)
-              </h3>
-              <span className="text-[10px] text-zinc-400 font-mono">Tamaño dinámico en tiempo real</span>
             </div>
 
             <div className="w-full overflow-x-auto rounded-xl border border-zinc-800">
-              <table className="w-full text-left border-collapse text-[11px]">
-                <thead className="bg-zinc-900 text-zinc-400 font-mono">
+              <table className="w-full text-left border-collapse text-xs font-mono">
+                <thead className="bg-zinc-900 text-zinc-300">
                   <tr>
-                    <th className="p-2.5">ID Pedido</th>
-                    <th className="p-2.5">Cliente</th>
-                    <th className="p-2.5">Producto</th>
-                    <th className="p-2.5">Tipo de Masa</th>
-                    <th className="p-2.5 text-center">Gramaje</th>
-                    <th className="p-2.5 text-center">Desglose (Sol. + Seg. - Bodega)</th>
-                    <th className="p-2.5 text-center">Entrega</th>
-                    <th className="p-2.5">Modalidad</th>
+                    <th className="p-3">Ingrediente</th>
+                    <th className="p-3 text-center">Base (g)</th>
+                    <th className="p-3 text-center">% Panadero</th>
+                    <th className="p-3 text-right text-amber-400">Cantidad Escalada (g)</th>
+                    <th className="p-3 text-right text-emerald-400">Cantidad Escalada (Kg)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-900/60 font-mono text-zinc-300">
-                  {pedidosPendientesCola.map((p) => (
-                    <tr key={p.loteId} className="hover:bg-zinc-900/40">
-                      <td className="p-2.5">
-                        <div className="font-bold text-amber-400">{p.loteId}</div>
-                        <div className="text-[10px] text-zinc-400 italic">Obs: {p.observaciones}</div>
-                      </td>
-                      <td className="p-2.5 font-sans">{p.cliente}</td>
-                      <td className="p-2.5">{p.producto}</td>
-                      <td className="p-2.5 text-zinc-400">{p.tipoMasa}</td>
-                      <td className="p-2.5 text-center text-cyan-400">{p.gramajePiezaG}g</td>
-                      <td className="p-2.5 text-center text-amber-400 font-bold">
-                        {p.cantidadSolicitada} + {p.unidadesSeguridad} - {p.existenciaBodega} = {p.cantidadNetaFabricar} unids
-                      </td>
-                      <td className="p-2.5 text-zinc-400">{p.fechaEntrega}</td>
-                      <td className="p-2.5">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          p.modalidad === "Urgente" 
-                            ? "bg-red-500/20 text-red-400 border border-red-500/30" 
-                            : "bg-zinc-800 text-zinc-400"
-                        }`}>
-                          {p.modalidad}
-                        </span>
+                <tbody className="divide-y divide-zinc-900">
+                  {!paso3Completado ? (
+                    <tr>
+                      <td colSpan={5} className="p-6 text-center text-red-400 font-bold italic">
+                        🔒 Complete los pasos anteriores para calcular el pesaje de ingredientes.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    ingredientesReceta.map((ing) => {
+                      const gramosBase = typeof ing.gramosOriginal === "number" ? ing.gramosOriginal : 0;
+                      const gramosEscalados = gramosBase * factorEscala;
+                      const kgEscalados = gramosEscalados / 1000;
+
+                      return (
+                        <tr key={ing.id} className="hover:bg-zinc-900/40">
+                          <td className="p-3 font-bold text-zinc-200">{ing.descripcion}</td>
+                          <td className="p-3 text-center text-zinc-400">{ing.gramosOriginal !== "" ? ing.gramosOriginal : "—"}</td>
+                          <td className="p-3 text-center text-cyan-400">{ing.porcentajePanadero !== "" ? `${ing.porcentajePanadero}%` : "—"}</td>
+                          <td className="p-3 text-right font-bold text-amber-400">
+                            {gramosBase > 0 ? gramosEscalados.toFixed(1) : "A criterio"}
+                          </td>
+                          <td className="p-3 text-right font-bold text-emerald-400">
+                            {gramosBase > 0 ? kgEscalados.toFixed(3) : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          {/* CONTENEDOR: VALIDACIÓN DE CÉDULA Y FIRMA DE OPERARIO (PASO 5) */}
+          <div className={`bg-zinc-950 p-6 rounded-2xl border space-y-4 shadow-xl transition-all ${
+            !paso4Completado ? "opacity-40 border-red-500/50 bg-red-950/10" : "border-zinc-800 opacity-100"
+          }`}>
+            <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+              <div>
+                <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                  Firma y Validación de Responsable (Paso 5)
+                </h3>
+                <p className="text-[11px] text-zinc-400">
+                  Ingrese su cédula para autorizar la creación del lote y habilitar el tránsito a Amasado.
+                </p>
+              </div>
+              {!paso4Completado && (
+                <span className="text-[10px] font-mono text-red-400 font-bold">🔒 Candado Activo</span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div className="space-y-1.5">
+                <label className="text-zinc-300 text-xs font-bold block uppercase">
+                  Cédula de Identidad del Operador:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. 10433935"
+                  value={cedulaResponsable}
+                  disabled={!paso4Completado}
+                  onChange={(e) => manejarCedula(e.target.value)}
+                  className={`w-full p-2.5 rounded-lg border text-xs font-mono ${
+                    !paso4Completado ? "bg-zinc-900 text-zinc-600 cursor-not-allowed border-zinc-800" : "bg-zinc-900 text-amber-400 border-zinc-800 focus:outline-none focus:border-amber-500 font-bold"
+                  }`}
+                />
+              </div>
+
+              <div className="bg-zinc-900 p-3.5 rounded-xl border border-zinc-800 space-y-1">
+                <div className="text-[10px] text-zinc-400 uppercase">Responsable Validado:</div>
+                <div className={`text-xs font-bold ${paso5Completado ? "text-emerald-400" : "text-zinc-400"}`}>
+                  {nombreResponsable}
+                </div>
+              </div>
+            </div>
+
+            {/* BOTONERA DE ACCIÓN FINAL */}
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-zinc-900">
+              <button
+                type="button"
+                onClick={registrarEnBitacora}
+                disabled={!paso5Completado}
+                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  !paso5Completado ? "bg-zinc-900 text-zinc-600 border border-zinc-800 cursor-not-allowed" : "bg-zinc-900 hover:bg-zinc-800 text-cyan-400 border border-cyan-500/40 cursor-pointer shadow"
+                }`}
+              >
+                📝 Registrar en Bitácora
+              </button>
+
+              <button
+                type="button"
+                onClick={avanzarSiguienteEstacion}
+                disabled={!paso5Completado}
+                className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                  !paso5Completado ? "bg-zinc-900 text-zinc-600 border border-zinc-800 cursor-not-allowed" : "bg-amber-500 hover:bg-amber-400 text-black border border-amber-400 cursor-pointer shadow-lg shadow-amber-500/20"
+                }`}
+              >
+                🚀 Avanzar a Estación 2 (Amasado) →
+              </button>
             </div>
           </div>
 

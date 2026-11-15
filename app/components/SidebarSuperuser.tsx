@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export interface SidebarSuperuserProps {
   superuserModoActivo: boolean;
@@ -25,7 +25,13 @@ export default function SidebarSuperuser({
 }: SidebarSuperuserProps) {
   const [superuserColapsado, setSuperuserColapsado] = useState<boolean>(false);
 
-  // Si no está activo el modo superuser, no renderizamos este sidebar
+  // Sincronizar el estado superuser con localStorage para que no se pierda al recargar
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("synapse_superuser_activo", superuserModoActivo ? "true" : "false");
+    }
+  }, [superuserModoActivo]);
+
   if (!superuserModoActivo) return null;
 
   const dashboardsSuperuser = [
@@ -63,6 +69,9 @@ export default function SidebarSuperuser({
   };
 
   const ejecutarCierreSesion = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("synapse_superuser_activo");
+    }
     if (handleCerrarSesion) {
       handleCerrarSesion();
     } else if (typeof window !== "undefined") {
@@ -122,7 +131,7 @@ export default function SidebarSuperuser({
             </div>
 
             {dashboardsSuperuser.map((item) => {
-              const activo = estacionActiva === item.id;
+              const activo = estacionActiva === item.id || estacionActiva === Number(item.id.replace("SU", ""));
               return (
                 <button
                   key={item.id}
@@ -131,7 +140,7 @@ export default function SidebarSuperuser({
                     if (item.id === "SU20") {
                       window.location.href = "/dashboard/dashboard-20";
                     } else if (item.id === "SU21") {
-                      window.location.href = "/dashboard-21";
+                      window.location.href = "/dashboard/dashboard-21"; // Ruta corregida correctamente
                     } else {
                       setEstacionActiva(item.id);
                     }
@@ -153,7 +162,12 @@ export default function SidebarSuperuser({
             
             <button
               type="button"
-              onClick={() => setSuperuserModoActivo(false)}
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("synapse_superuser_activo", "false");
+                }
+                setSuperuserModoActivo(false);
+              }}
               className="w-full text-left px-4 py-2.5 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-3 border bg-zinc-900 border-amber-500/50 hover:bg-zinc-800 text-amber-400 cursor-pointer shadow-lg"
             >
               <span className="text-base">👨‍🍳</span>
@@ -202,7 +216,8 @@ export default function SidebarSuperuser({
               onClick={() => {
                 if (typeof window !== "undefined") {
                   localStorage.setItem("synapse_rol", "superuser");
-                  window.location.reload();
+                  localStorage.setItem("synapse_superuser_activo", "true");
+                  window.location.reload(); // Recarga manteniendo el estado superuser activo en esta misma pantalla
                 }
               }}
               className="w-full py-2 bg-amber-500 text-black font-black text-xs uppercase tracking-wider rounded-full hover:bg-amber-400 transition-all cursor-pointer shadow-lg text-center font-mono"
@@ -232,3 +247,13 @@ export default function SidebarSuperuser({
     </>
   );
 }
+2. Inicialización en Dashboard 21 (app/dashboard/dashboard-21/page.tsx)
+Asegúrate de que en tus dashboards 20 y 21 el estado inicial del superusuario lea del localStorage para que la barra se mantenga visible y activa tras actualizar:
+
+TypeScript
+  const [superuserModoActivo, setSuperuserModoActivo] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("synapse_superuser_activo") === "true" || true;
+    }
+    return true;
+  });

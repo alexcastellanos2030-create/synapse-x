@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import SidebarSuperuser from "@/app/components/SidebarSuperuser"; // o su ruta relativa exacta con mayúsculas y minúsculas idénticas
+import SidebarSuperuser from "../../components/SidebarSuperuser";
 
 interface LicenciaCliente {
   id: string;
