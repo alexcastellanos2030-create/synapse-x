@@ -1,0 +1,228 @@
+'use client';
+
+import React, { useState } from 'react';
+import { ShieldAlert, Activity, Cpu, RefreshCw, AlertTriangle, Zap, Radio } from 'lucide-react';
+
+export default function SimulationLabPanel() {
+  // Estado simulado de la planta (Gemelo Digital)
+  const [plantState, setPlantState] = useState({
+    ovenTemp: 240,         // °C
+    mixerSpeed: 85,        // % RPM
+    conveyorActive: true,
+    hopperWeight: 1250,    // kg
+  });
+
+  // Estado de Inyección de Fallas
+  const [faults, setFaults] = useState({
+    sensorFailure: false,
+    authBypassAttempt: false,
+    plcTimeout: false,
+  });
+
+  // Logs de telemetría en tiempo real
+  const [logs, setLogs] = useState<Array<{ id: number; time: string; type: 'INFO' | 'WARN' | 'ERROR'; message: string }>>([
+    { id: 1, time: '12:00:01', type: 'INFO', message: 'Sistema Synapse-X OSAI Industrial inicializado en Modo Simulación Superusuario.' },
+  ]);
+
+  const addLog = (type: 'INFO' | 'WARN' | 'ERROR', message: string) => {
+    const time = new Date().toLocaleTimeString();
+    setLogs(prev => [{ id: Date.now(), time, type, message }, ...prev.slice(0, 19)]);
+  };
+
+  const toggleFault = (faultKey: keyof typeof faults) => {
+    const newState = !faults[faultKey];
+    setFaults(prev => ({ ...prev, [faultKey]: newState }));
+    if (newState) {
+      addLog('ERROR', `[INYECCIÓN DE FALLA] Activada: ${faultKey.toUpperCase()}`);
+    } else {
+      addLog('INFO', `[RECUPERACIÓN] Resuelta falla: ${faultKey.toUpperCase()}`);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-slate-200 p-6 font-mono text-xs select-none">
+      
+      {/* Cabecera del Laboratorio */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-emerald-500/30 pb-4 mb-6 gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <h1 className="text-sm font-bold tracking-wider text-emerald-400 uppercase">
+              Synapse-X OSAI Industrial // LABORATORIO VIRTUAL & GEMELO DIGITAL (SU21)
+            </h1>
+          </div>
+          <p className="text-slate-400 text-[10px] mt-1">
+            Entorno de pruebas aislado para validación de lógica, telemetría y tolerancia a fallos.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded flex items-center gap-2">
+            <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span className="text-slate-300">ESTADO: <strong className="text-emerald-400">SIMULANDO</strong></span>
+          </div>
+          <button 
+            onClick={() => { setPlantState({ ovenTemp: 240, mixerSpeed: 85, conveyorActive: true, hopperWeight: 1250 }); addLog('INFO', 'Simulador reiniciado a valores nominales.'); }}
+            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+            <span>Resetear Mock</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Grid Principal de Control */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Columna 1: Controles del Gemelo Digital */}
+        <div className="bg-slate-950 border border-slate-800/80 rounded p-4 flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h2 className="text-slate-300 font-bold uppercase flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-emerald-400" /> Parámetros Físicos (Mock)
+            </h2>
+            <span className="text-[10px] text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/20">En Vivo</span>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-[11px] mb-1">
+                <span className="text-slate-400">Temperatura Horno 1:</span>
+                <span className="text-amber-400 font-bold">{plantState.ovenTemp} °C</span>
+              </div>
+              <input 
+                type="range" min="100" max="350" value={plantState.ovenTemp} 
+                onChange={(e) => setPlantState({ ...plantState, ovenTemp: Number(e.target.value) })}
+                className="w-full accent-emerald-500 bg-slate-900 h-1 rounded cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between text-[11px] mb-1">
+                <span className="text-slate-400">Velocidad Amasadora (Koenig):</span>
+                <span className="text-emerald-400 font-bold">{plantState.mixerSpeed} RPM</span>
+              </div>
+              <input 
+                type="range" min="0" max="150" value={plantState.mixerSpeed} 
+                onChange={(e) => setPlantState({ ...plantState, mixerSpeed: Number(e.target.value) })}
+                className="w-full accent-emerald-500 bg-slate-900 h-1 rounded cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between text-[11px] mb-1">
+                <span className="text-slate-400">Peso Tolva Principal:</span>
+                <span className="text-cyan-400 font-bold">{plantState.hopperWeight} kg</span>
+              </div>
+              <input 
+                type="range" min="0" max="3000" value={plantState.hopperWeight} 
+                onChange={(e) => setPlantState({ ...plantState, hopperWeight: Number(e.target.value) })}
+                className="w-full accent-cyan-500 bg-slate-900 h-1 rounded cursor-pointer"
+              />
+            </div>
+
+            <div className="pt-2 flex items-center justify-between border-t border-slate-900">
+              <span className="text-slate-400">Estado de Banda Transportadora:</span>
+              <button 
+                onClick={() => {
+                  const newState = !plantState.conveyorActive;
+                  setPlantState({ ...plantState, conveyorActive: newState });
+                  addLog('INFO', `Banda transportadora ${newState ? 'ACTIVADA' : 'DETENIDA'}`);
+                }}
+                className={`px-3 py-1 rounded text-[10px] font-bold border transition cursor-pointer ${plantState.conveyorActive ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/40' : 'bg-rose-950/60 text-rose-400 border-rose-500/40'}`}
+              >
+                {plantState.conveyorActive ? 'OPERANDO' : 'DETENIDO'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Columna 2: Panel Inyector de Fallas */}
+        <div className="bg-slate-950 border border-slate-800/80 rounded p-4 flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h2 className="text-slate-300 font-bold uppercase flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-rose-400" /> Inyector de Fallas (Test 0.01%)
+            </h2>
+            <span className="text-[10px] text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-500/20">Resiliencia</span>
+          </div>
+
+          <p className="text-slate-400 text-[11px]">
+            Activa anomalías artificiales para verificar cómo reaccionan las validaciones y los sub-portales de seguridad:
+          </p>
+
+          <div className="space-y-2.5">
+            <button 
+              onClick={() => toggleFault('sensorFailure')}
+              className={`w-full p-2.5 rounded border text-left flex items-center justify-between transition cursor-pointer ${faults.sensorFailure ? 'bg-rose-950/40 border-rose-500 text-rose-300' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className={`w-4 h-4 ${faults.sensorFailure ? 'text-rose-400 animate-bounce' : 'text-slate-500'}`} />
+                <span>Fallo de Lectura de Sensores (Timeout)</span>
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded ${faults.sensorFailure ? 'bg-rose-500 text-black font-bold' : 'bg-slate-800 text-slate-400'}`}>
+                {faults.sensorFailure ? 'ACTIVO' : 'INACTIVO'}
+              </span>
+            </button>
+
+            <button 
+              onClick={() => toggleFault('authBypassAttempt')}
+              className={`w-full p-2.5 rounded border text-left flex items-center justify-between transition cursor-pointer ${faults.authBypassAttempt ? 'bg-rose-950/40 border-rose-500 text-rose-300' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+            >
+              <div className="flex items-center gap-2">
+                <ShieldAlert className={`w-4 h-4 ${faults.authBypassAttempt ? 'text-rose-400 animate-bounce' : 'text-slate-500'}`} />
+                <span>Simular Intrusión Whitelist (Sub Portal 3)</span>
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded ${faults.authBypassAttempt ? 'bg-rose-500 text-black font-bold' : 'bg-slate-800 text-slate-400'}`}>
+                {faults.authBypassAttempt ? 'ACTIVO' : 'INACTIVO'}
+              </span>
+            </button>
+
+            <button 
+              onClick={() => toggleFault('plcTimeout')}
+              className={`w-full p-2.5 rounded border text-left flex items-center justify-between transition cursor-pointer ${faults.plcTimeout ? 'bg-rose-950/40 border-rose-500 text-rose-300' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Zap className={`w-4 h-4 ${faults.plcTimeout ? 'text-amber-400 animate-bounce' : 'text-slate-500'}`} />
+                <span>Corte de Conexión PLC Industrial</span>
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded ${faults.plcTimeout ? 'bg-amber-500 text-black font-bold' : 'bg-slate-800 text-slate-400'}`}>
+                {faults.plcTimeout ? 'ACTIVO' : 'INACTIVO'}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Columna 3: Consola de Telemetría y Logs */}
+        <div className="bg-slate-950 border border-slate-800/80 rounded p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h2 className="text-slate-300 font-bold uppercase flex items-center gap-2">
+              <Activity className="w-4 h-4 text-cyan-400" /> Trazabilidad & Logs
+            </h2>
+            <span className="text-[10px] text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-500/20">Auditoría</span>
+          </div>
+
+          <div className="bg-black border border-slate-900 rounded p-3 h-56 overflow-y-auto space-y-1.5 font-mono text-[10px]">
+            {logs.map((log) => (
+              <div key={log.id} className="flex items-start gap-2 border-b border-slate-900/50 pb-1">
+                <span className="text-slate-500 shrink-0">[{log.time}]</span>
+                <span className={`px-1 rounded text-[9px] font-bold shrink-0 ${
+                  log.type === 'ERROR' ? 'bg-rose-950 text-rose-400 border border-rose-800' :
+                  log.type === 'WARN' ? 'bg-amber-950 text-amber-400 border border-amber-800' :
+                  'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                }`}>
+                  {log.type}
+                </span>
+                <span className="text-slate-300 break-all">{log.message}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-[10px] text-slate-500 flex justify-between items-center pt-1">
+            <span>Margen de Error Controlado: <strong className="text-emerald-400">0.01%</strong></span>
+            <span>Synapse-X OSAI Industrial</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  );
+}

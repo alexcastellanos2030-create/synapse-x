@@ -28,17 +28,19 @@ export const SUPERUSER_CREDENCIAL = {
   clavesValidas: ["*Paola123!", "*Ac12345!", "Iar661972", "Albani123", "Albany123"]
 };
 
-// 🍞 GENERADOR AUTOMÁTICO DE 30 PEDIDOS DE PRUEBA DIARIOS
-export const generar30PedidosPrueba = (): PedidoOperativo[] => {
+// 🍞 GENERADOR AUTOMÁTICO DE 50 PEDIDOS DE PRUEBA DIARIOS
+export const generar50PedidosPrueba = (): PedidoOperativo[] => {
   const productos = [
     { prod: "Pan B11 Brioche", masa: "Masa Brioche Tradicional", gr: 90 },
-    { prod: "Pan Hallulla Especial", masa: "Masa Hallulla Hoja", gr: 85 },
+    { prod: "Pan Especial Hallulla", masa: "Masa Hallulla", gr: 90 },
+    { prod: "Pan Especial Coliza", masa: "Masa Hallulla", gr: 90 },
+    { prod: "Pan Especial Completo", masa: "Masa Hallulla", gr: 80 },
     { prod: "Pan Marraqueta Crujiente", masa: "Masa Marraqueta Directa", gr: 100 },
     { prod: "Pan Amasado Casero", masa: "Masa Amasada Tradicional", gr: 110 },
     { prod: "Baguette Rústica", masa: "Masa Madre Rústica", gr: 250 },
     { prod: "Ciabatta de Oliva", masa: "Masa Alta Hidratación Ciabatta", gr: 120 },
     { prod: "Croissant Mantequilla", masa: "Masa Hojaldre Mantequilla", gr: 70 },
-    { prod: "Pan Hamburgo Sésamo", masa: "Masa Brioche Hamburgo", gr: 95 }
+    { prod: "Pan Hamburguesa Sésamo", masa: "Masa Brioche Hamburguesa", gr: 95 }
   ];
 
   const coberturas = ["Huevo Batido", "Mantequilla Derretida", "Agua / Vapor", "Brillo Dulce", "Ninguna"];

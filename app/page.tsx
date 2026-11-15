@@ -1,273 +1,293 @@
 "use client";
 
-"use client";
-
 import React, { useState, useEffect } from "react";
-import Estacion1, { LoteCreado, PedidoOperativo } from "./estaciones/estacion-1/page";
-import Estacion2, { LotePesaje } from "./estaciones/estacion-2/page";
-import { SUPERUSER_CREDENCIAL, generar30PedidosPrueba } from "./data/bakeryConstants";
-import TablaTrazabilidadEstandar from "./components/TablaTrazabilidadEstandar";
-export interface AlertaSistema {
-  id: string;
-  fechaHora: string;
-  tipo: "BLOQUEO_USUARIO" | "DESVIACION_PESO" | "TEMPERATURA_HORNO" | "PARADA_PRODUCCION" | "OTRO";
-  origenModulo: string;
-  usuarioInvolucrado: string;
-  cedulaInvolucrada: string;
-  mensaje: string;
-  nivelSeveridad: "CRITICO" | "ADVERTENCIA" | "INFORMATIVO";
-  atendida: boolean;
-}
+import { supabase } from "./lib/supabase";
+import SuperuserLogin from "./components/SuperuserLogin";
+import OperarioLogin from "./components/OperarioLogin";
+import PanelSuperuserPage from "./components/PanelSuperuserPage";
+import PanelAdminLocal from "./components/PanelAdminLocal";
+import Sidebar from "./components/Sidebar";
+import SidebarSuperuser from "./components/SidebarSuperuser";
+import PanelProduccionesPestañas from "./components/PanelProduccionesPestañas";
+import PanelPedidosPestañas from "./components/PanelPedidosPestañas";
+import PanelProtocolosOSAI from "./components/PanelProtocolosOSAI";
+import DashboardPrincipal from "./components/DashboardPrincipal";
+
+import { SUPERUSER_CREDENCIAL } from "./data/bakeryConstants";
 
 export interface UsuarioRegistrado {
   nombre: string;
   cedula: string;
   clave: string;
-  rol: "admin" | "operario";
+  rol: "admin" | "operario" | "cajera" | "supervisor" | "superuser";
   bloqueado: boolean;
-  causaBloqueo?: string;
-}
-
-interface ItemProductoTemp {
-  idTemp: string;
-  producto: string;
-  tipoMasa: string;
-  gramajePiezaG: number;
-  cantidadSolicitada: number;
-  cobertura: string;
-  topping: string;
-  observacionesProd: string;
 }
 
 export default function SynapseOS() {
   const [autenticado, setAutenticado] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("synapse_autenticado") === "true";
+      const isAuth = localStorage.getItem("synapse_autenticado") === "true";
+      const ultimaActividad = localStorage.getItem("synapse_ultima_actividad");
+      const savedRol = localStorage.getItem("synapse_rol");
+      
+      if (isAuth && ultimaActividad) {
+        const ahora = Date.now();
+        const tiempoTranscurrito = ahora - Number(ultimaActividad);
+        const esSuper = savedRol === "superuser";
+        const limiteTiempo = esSuper ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000;
+
+        if (tiempoTranscurrito < limiteTiempo) {
+          localStorage.setItem("synapse_ultima_actividad", String(ahora));
+          return true;
+        } else {
+          localStorage.clear();
+          return false;
+        }
+      }
     }
     return false;
   });
 
-  const [rolActivo, setRolActivo] = useState<"superuser" | "admin" | "operario">((): any => {
+  const [rolActivo, setRolActivo] = useState<"superuser" | "admin" | "operario" | "cajera" | "supervisor">((): any => {
     if (typeof window !== "undefined") {
       const savedRol = localStorage.getItem("synapse_rol");
-      if (savedRol === "superuser" || savedRol === "admin" || savedRol === "operario") {
-        return savedRol;
-      }
+      if (savedRol) return savedRol as any;
     }
     return "superuser";
   });
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("synapse_autenticado", String(autenticado));
-      localStorage.setItem("synapse_rol", rolActivo);
-    }
-  }, [autenticado, rolActivo]);
-
   const [tipoPortalLogin, setTipoPortalLogin] = useState<"superuser" | "personal">("superuser");
-  const [temaVisual, setTemaVisual] = useState<"oscuro" | "claro" | "sistema">("oscuro");
-  const [sidebarRetraido, setSidebarRetraido] = useState<boolean>(false);
+  const [usuariosAutorizados, setUsuariosAutorizados] = useState<UsuarioRegistrado[]>([]);
+  const [alertasSistema, setAlertasSistema] = useState<any[]>([]);
+  
+  // Cambiamos a string | number para admitir el prefijo "SU" en las estaciones de superusuario
+  const [estacionActiva, setEstacionActiva] = useState<string | number>(1);
+  const [lotesActivos, setLotesActivos] = useState<any[]>([]);
+  
+  const [sidebarColapsada, setSidebarColapsada] = useState<boolean>(false);
+  const [sidebarMovilAbierta, setSidebarMovilAbierta] = useState<boolean>(false);
+  const [superuserModoActivo, setSuperuserModoActivo] = useState<boolean>(false);
 
-  const esClaro = temaVisual === "claro";
-
-  const [inputCedula, setInputCedula] = useState<string>("");
-  const [nombreDetectado, setNombreDetectado] = useState<string>("••••••••••••••••");
-  const [inputClave, setInputClave] = useState<string>("");
-  const [inputClaveSecundaria, setInputClaveSecundaria] = useState<string>("");
-  const [verClave, setVerClave] = useState<boolean>(false);
-  const [verClave2, setVerClave2] = useState<boolean>(false);
-
-  const [intentosFallidos, setIntentosFallidos] = useState<number>(0);
-  const [usuarioBloqueado, setUsuarioBloqueado] = useState<boolean>(false);
-
-  const [alertasSistema, setAlertasSistema] = useState<AlertaSistema[]>([]);
-  const [bitacoraOculta, setBitacoraOculta] = useState<string[]>([]);
-
-  const [usuariosAutorizados, setUsuariosAutorizados] = useState<UsuarioRegistrado[]>([
-    { nombre: "Pedro Pérez", cedula: "10000000", clave: "Pedro123!", rol: "operario", bloqueado: false },
-    { nombre: "Carolina Pérez", cedula: "87654321", clave: "Caro2026!", rol: "admin", bloqueado: false },
-    { nombre: "Elvis Vera", cedula: "12345678", clave: "Elvis2026!", rol: "operario", bloqueado: false }
-  ]);
-
-  const [modoEdicionForm, setModoEdicionForm] = useState<boolean>(false);
-  const [nuevoNombre, setNuevoNombre] = useState<string>("");
-  const [nuevoCedula, setNuevoCedula] = useState<string>("");
-  const [nuevoClave, setNuevoClave] = useState<string>("");
-  const [nuevoRol, setNuevoRol] = useState<"admin" | "operario">("operario");
-  const [cedulaEnEdicion, setCedulaEnEdicion] = useState<string | null>(null);
-
-  const [pedidosColaPrueba, setPedidosColaPrueba] = useState<PedidoOperativo[]>([]);
-
-  const [clienteNombre, setClienteNombre] = useState<string>("");
-  const [clienteDireccion, setClienteDireccion] = useState<string>("");
-  const [clienteTelefono, setClienteTelefono] = useState<string>("");
-  const [fechaRecepcion, setFechaRecepcion] = useState<string>(new Date().toISOString().slice(0, 16));
-  const [fechaEntrega, setFechaEntrega] = useState<string>(new Date().toISOString().slice(0, 16));
-  const [modalidadPedido, setModalidadPedido] = useState<string>("Normal");
-
-  const [prodSeleccionado, setProdSeleccionado] = useState<string>("Pan B11 Brioche");
-  const [tipoMasa, setTipoMasa] = useState<string>("Masa Brioche Tradicional");
-  const [gramajeG, setGramajeG] = useState<number>(90);
-  const [cantidad, setCantidad] = useState<number>(100);
-  const [cobertura, setCobertura] = useState<string>("Huevo Batido");
-  const [topping, setTopping] = useState<string>("Sésamo Blanco");
-  const [obsProducto, setObsProducto] = useState<string>("");
-
-  const [cedulaResponsableRegistro, setCedulaResponsableRegistro] = useState<string>("");
-  const [nombreResponsableRegistro, setNombreResponsableRegistro] = useState<string>("⚠️ Al ingresar su cédula, aquí se refleja su nombre completo. Listo.");
-
-  const [listaProductosTemp, setListaProductosTemp] = useState<ItemProductoTemp[]>([]);
-
+  // SINCRONIZACIÓN EN TIEMPO REAL CON SUPABASE (Laptop y Móvil)
   useEffect(() => {
-    const pedidosCargados = generar30PedidosPrueba();
-    setPedidosColaPrueba(pedidosCargados);
+    async function cargarUsuariosSupabase() {
+      try {
+        const { data, error } = await supabase.from("usuarios").select("*");
+        if (!error && data && data.length > 0) {
+          setUsuariosAutorizados(data as UsuarioRegistrado[]);
+        }
+      } catch (err) {
+        console.error("Error cargando usuarios:", err);
+      }
+    }
+    cargarUsuariosSupabase();
+
+    const canalUsuarios = supabase
+      .channel("public:usuarios")
+      .on("postgres_changes", { event: "*", schema: "public", table: "usuarios" }, () => {
+        cargarUsuariosSupabase();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canalUsuarios);
+    };
   }, []);
 
-  const registrarEnBitacora = (evento: string) => {
-    const timestamp = new Date().toLocaleString();
-    setBitacoraOculta((prev) => [`[${timestamp}] ${evento}`, ...prev]);
-  };
+  const handleIngresoSuperuser = (rol: "superuser", cedula: string, clave1: string, clave2: string) => {
+    const cedulaLimpia = cedula.trim();
+    if (cedulaLimpia === SUPERUSER_CREDENCIAL.cedula) {
+      const esValidaArriba = SUPERUSER_CREDENCIAL.clavesValidas.includes(clave1);
+      const esValidaAbajo = SUPERUSER_CREDENCIAL.clavesValidas.includes(clave2);
 
-  useEffect(() => {
-    const cedLimpia = cedulaResponsableRegistro.trim();
-    if (!cedLimpia) {
-      setNombreResponsableRegistro("⚠️ Al ingresar su cédula, aquí se refleja su nombre completo. Listo.");
-      return;
-    }
-    if (cedLimpia === SUPERUSER_CREDENCIAL.cedula) {
-      setNombreResponsableRegistro(SUPERUSER_CREDENCIAL.nombre + " (Superuser)");
-    } else {
-      const usr = usuariosAutorizados.find((u) => u.cedula === cedLimpia);
-      if (usr) {
-        setNombreResponsableRegistro(usr.nombre + ` (${usr.rol.toUpperCase()})`);
-      } else {
-        setNombreResponsableRegistro("⚠️ Cédula no registrada en el personal autorizado.");
-      }
-    }
-  }, [cedulaResponsableRegistro, usuariosAutorizados]);
-
-  useEffect(() => {
-    const cedLimpia = inputCedula.trim();
-    if (cedLimpia === SUPERUSER_CREDENCIAL.cedula) {
-      setNombreDetectado("Alexander Castellanos (Superuser)");
-    } else {
-      const u = usuariosAutorizados.find((usr) => usr.cedula === cedLimpia);
-      if (u) {
-        setNombreDetectado(u.nombre);
-      } else if (cedLimpia.length >= 7) {
-        setNombreDetectado("⚠️ Cédula no registrada");
-      } else {
-        setNombreDetectado("••••••••••••••••");
-      }
-    }
-  }, [inputCedula, usuariosAutorizados]);
-
-  const handleIngresoPortal = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cedulaLimpia = inputCedula.trim();
-    const claveLimpia = inputClave.trim();
-    const claveSecLimpia = inputClaveSecundaria.trim();
-
-    if (tipoPortalLogin === "superuser") {
-      if (cedulaLimpia === SUPERUSER_CREDENCIAL.cedula) {
-        const esValidaArriba = SUPERUSER_CREDENCIAL.clavesValidas.includes(claveLimpia);
-        const esValidaAbajo = SUPERUSER_CREDENCIAL.clavesValidas.includes(claveSecLimpia);
-
-        if (esValidaArriba || esValidaAbajo || (claveLimpia && claveSecLimpia)) {
-          setAutenticado(true);
-          setRolActivo("superuser");
-          return;
+      if (esValidaArriba || esValidaAbajo || (clave1 && clave2)) {
+        setAutenticado(true);
+        setRolActivo("superuser");
+        if (typeof window !== "undefined") {
+          localStorage.setItem("synapse_autenticado", "true");
+          localStorage.setItem("synapse_rol", "superuser");
+          localStorage.setItem("synapse_ultima_actividad", String(Date.now()));
         }
+        return;
       }
-      alert(`❌ Credenciales incorrectas.`);
-      return;
     }
+    alert("❌ Credenciales de Superuser incorrectas.");
+  };
 
-    const usuarioEncontrado = usuariosAutorizados.find((u) => u.cedula === cedulaLimpia);
-    if (usuarioEncontrado && usuarioEncontrado.clave === claveLimpia) {
-      setAutenticado(true);
-      setRolActivo(usuarioEncontrado.rol);
-    } else {
-      setIntentosFallidos((prev) => prev + 1);
-      alert(`❌ Clave incorrecta.`);
+  const handleIngresoOperario = (rol: any, cedula: string, clave: string) => {
+    setAutenticado(true);
+    setRolActivo(rol);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("synapse_autenticado", "true");
+      localStorage.setItem("synapse_rol", rol);
+      localStorage.setItem("synapse_ultima_actividad", String(Date.now()));
     }
   };
 
-  const [estacionActiva, setEstacionActiva] = useState<number>(0);
-  const [lotesActivos, setLotesActivos] = useState<LoteCreado[]>([]);
+  const handleCerrarSesion = () => {
+    setAutenticado(false);
+    if (typeof window !== "undefined") localStorage.clear();
+  };
+
+  const conmutarRol = () => {
+    setRolActivo((prev) => (prev === "superuser" ? "operario" : "superuser"));
+  };
+
+  const agregarAlerta = (nuevaAlerta: any) => {
+    setAlertasSistema((prev) => [nuevaAlerta, ...prev]);
+  };
+
+  const guardarNuevoUsuarioSupabase = async (nuevoUsr: UsuarioRegistrado) => {
+    setUsuariosAutorizados((prev) => {
+      const existe = prev.some((u) => u.cedula === nuevoUsr.cedula);
+      if (existe) {
+        return prev.map((u) => (u.cedula === nuevoUsr.cedula ? nuevoUsr : u));
+      }
+      return [...prev, nuevoUsr];
+    });
+
+    const { error } = await supabase.from("usuarios").upsert([nuevoUsr], { onConflict: "cedula" });
+    if (error) {
+      console.error("Error al sincronizar usuario en Supabase:", error);
+    }
+  };
+
+  const actualizarEstadoUsuario = async (cedula: string, bloqueado: boolean) => {
+    setUsuariosAutorizados((prev) => prev.map((u) => (u.cedula === cedula ? { ...u, bloqueado } : u)));
+    const { error } = await supabase.from("usuarios").update({ bloqueado }).eq("cedula", cedula);
+    if (error) {
+      console.error("Error al actualizar estado en Supabase:", error);
+    }
+  };
+
+  const handleRestaurarSistema = (usuariosRestaurados: UsuarioRegistrado[]) => {
+    setUsuariosAutorizados(usuariosRestaurados);
+  };
 
   if (!autenticado) {
-    return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-[#0d1322] font-sans p-4">
-        <div className="w-full max-w-xl bg-[#151c2e] border border-slate-700/85 rounded-3xl shadow-2xl p-6 text-white">
-          <h1 className="text-xl font-bold text-amber-400 mb-4 font-mono">SYNAPSE-X OS | ACCESO</h1>
-          <form onSubmit={handleIngresoPortal} className="space-y-4">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Cédula</label>
-              <input
-                type="text"
-                value={inputCedula}
-                onChange={(e) => setInputCedula(e.target.value)}
-                className="w-full p-2.5 rounded bg-slate-900 border border-slate-700 text-white text-sm"
-                placeholder="Ingrese su cédula"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Clave de Acceso</label>
-              <input
-                type="password"
-                value={inputClave}
-                onChange={(e) => setInputClave(e.target.value)}
-                className="w-full p-2.5 rounded bg-slate-900 border border-slate-700 text-white text-sm"
-                placeholder="••••••••"
-              />
-            </div>
-            {tipoPortalLogin === "superuser" && (
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Clave Secundaria (Superuser)</label>
-                <input
-                  type="password"
-                  value={inputClaveSecundaria}
-                  onChange={(e) => setInputClaveSecundaria(e.target.value)}
-                  className="w-full p-2.5 rounded bg-slate-900 border border-slate-700 text-white text-sm"
-                  placeholder="••••••••"
-                />
-              </div>
-            )}
+    if (tipoPortalLogin === "superuser") {
+      return (
+        <div>
+          <div className="absolute top-4 left-4 z-50">
             <button
-              type="submit"
-              className="w-full py-3 bg-amber-500 text-slate-950 font-bold rounded-xl hover:bg-amber-400 transition-colors"
+              type="button"
+              onClick={() => setTipoPortalLogin("personal")}
+              className="px-4 py-2 bg-zinc-900 text-amber-400 border border-amber-500/40 rounded-xl text-xs font-mono font-bold shadow-lg hover:bg-zinc-800 transition-all cursor-pointer"
             >
-              Ingresar al Sistema
+              👤 Ir a Portal Operarios
             </button>
-          </form>
+          </div>
+          <SuperuserLogin onLoginSuccess={handleIngresoSuperuser} />
         </div>
-      </div>
-    );
+      );
+    } else {
+      return (
+        <OperarioLogin
+          usuarios={usuariosAutorizados}
+          onLoginSuccess={handleIngresoOperario}
+          onVolverSuperuser={() => setTipoPortalLogin("superuser")}
+        />
+      );
+    }
   }
 
   return (
-    <div className={`flex h-screen w-screen overflow-hidden ${esClaro ? "bg-slate-100 text-slate-900" : "bg-[#0b101d] text-slate-100"} font-sans`}>
-      <div className="flex-1 flex flex-col h-full overflow-hidden p-6">
-        <h1 className="text-xl font-bold text-amber-400 font-mono mb-4">SYNAPSE-X OS | OSAI Industrial</h1>
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-          <button
-            onClick={() => setEstacionActiva(1)}
-            className={`px-4 py-2 rounded text-xs font-bold whitespace-nowrap ${estacionActiva === 1 ? "bg-amber-500 text-slate-950" : "bg-slate-800 text-slate-300"}`}
-          >
-            Estación 1: Selección de Pedidos
-          </button>
-        </div>
+    <div className="flex h-[100dvh] w-full overflow-hidden font-sans bg-black text-white relative">
+      
+      {/* 1. SIDEBAR OPERATIVO */}
+      {!superuserModoActivo && (
+        <Sidebar
+          sidebarColapsada={sidebarColapsada}
+          setSidebarColapsada={setSidebarColapsada}
+          sidebarMovilAbierta={sidebarMovilAbierta}
+          setSidebarMovilAbierta={setSidebarMovilAbierta}
+          estacionActiva={estacionActiva as number}
+          setEstacionActiva={setEstacionActiva}
+          rolActivo={rolActivo as any}
+          conmutarRol={conmutarRol}
+          temaVisual={"oscuro"}
+          setTemaVisual={() => {}}
+          handleCerrarSesion={handleCerrarSesion}
+          lotesActivos={lotesActivos}
+          onActivarSuperuser={() => {
+            setSuperuserModoActivo(true);
+            setEstacionActiva("SU99");
+          }}
+        />
+      )}
 
-        <div className="flex-1 overflow-y-auto bg-slate-900/40 p-4 rounded-xl border border-slate-800">
+      {/* 2. SIDEBAR EXCLUSIVO DE SUPERUSER */}
+      <SidebarSuperuser
+        superuserModoActivo={superuserModoActivo}
+        setSuperuserModoActivo={setSuperuserModoActivo}
+        rolActivo={rolActivo as any}
+        estacionActiva={estacionActiva}
+        setEstacionActiva={setEstacionActiva}
+      />
+
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="flex-1 flex flex-col h-full overflow-hidden p-3 sm:p-6 bg-black text-white w-full">
+        <header className="mb-4 bg-zinc-950 border border-zinc-800 px-4 py-3 rounded-2xl shadow-md flex items-center justify-between shrink-0">
+          <h2 className="text-xs sm:text-base font-black text-amber-500 font-mono uppercase tracking-wider pl-10 md:pl-0 truncate">
+            {estacionActiva === 1
+              ? "⚡ Centro de Mando Operativo (Dashboard)"
+              : estacionActiva === "SU99"
+              ? (rolActivo === "superuser" 
+                  ? "👑 Panel de Control y Gobernanza Superuser (Control de Usuarios)" 
+                  : "💼 Panel de Administración Local de Sucursal")
+              : estacionActiva === "SU4"
+              ? "🛡️ Módulo de Whitelist y Permisos Granulares"
+              : estacionActiva === 105
+              ? "⚙️ Módulo Central de Producción"
+              : estacionActiva === 0
+              ? "🛒 Módulo de Gestión de Pedidos"
+              : estacionActiva === 115
+              ? "🛡️ Centro de Protocolos y Puntos de Restauración OSAI"
+              : `Módulo ${estacionActiva}`}
+          </h2>
+        </header>
+
+        <div className="flex-1 overflow-y-auto pr-1 sm:pr-2">
           {estacionActiva === 1 && (
-            <div>
-              <h2 className="text-sm font-bold text-slate-300 mb-3">Cola de Pedidos Activos (Trazabilidad Estándar)</h2>
-              <TablaTrazabilidadEstandar pedidos={pedidosColaPrueba} esClaro={esClaro} />
+            <DashboardPrincipal
+              onNavegarPestaña={(id) => setEstacionActiva(id)}
+              nombreOperador={rolActivo === "superuser" ? "Alex Castellanos (Superuser)" : "Operador en Turno"}
+              cargoOperador={rolActivo === "superuser" ? "Maestro Técnico / Administrador" : "Operario Autorizado"}
+            />
+          )}
+          
+          {estacionActiva === "SU99" && (
+            <PanelSuperuserPage
+              usuarios={usuariosAutorizados}
+              onGuardarUsuario={guardarNuevoUsuarioSupabase}
+              onActualizarEstadoUsuario={actualizarEstadoUsuario}
+              alertas={alertasSistema}
+              onAgregarAlerta={agregarAlerta}
+              esSuperuser={rolActivo === "superuser"}
+            />
+          )}
+
+          {estacionActiva === "SU4" && (
+            <div className="p-6 bg-zinc-950 border border-zinc-800 rounded-3xl font-mono space-y-4 shadow-2xl">
+              <div className="flex items-center gap-3 border-b border-zinc-800 pb-4">
+                <span className="text-2xl">🛡️</span>
+                <div>
+                  <h3 className="text-amber-400 font-black text-base uppercase">Dashboard SU4: Matriz de Permisos y Whitelist</h3>
+                  <p className="text-xs text-zinc-400">Control estricto de direcciones IP, hardware autorizado y listas blancas operativas.</p>
+                </div>
+              </div>
             </div>
           )}
+          {estacionActiva === 0 && <PanelPedidosPestañas esSuperuser={rolActivo === "superuser"} />}
+          {estacionActiva === 105 && <PanelProduccionesPestañas />}
+          {estacionActiva === 115 && (
+            <PanelProtocolosOSAI
+              usuarios={usuariosAutorizados}
+              onRestaurarSistema={handleRestaurarSistema}
+            />
+          )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

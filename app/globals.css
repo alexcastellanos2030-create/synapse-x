@@ -1,8 +1,52 @@
 @import "tailwindcss";
 
+/* Habilita el soporte de modo oscuro por clase para todo el sistema operativo */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Reducción global del tamaño de fuente en todo el proyecto (~30% más compacto) */
+html {
+  font-size: 60%;
+}
+
 body {
-  background-color: #0b0f19;
-  color: #e2e8f0;
+  @apply bg-slate-100 dark:bg-[#0b101d] text-slate-900 dark:text-slate-100;
   font-family: 'Plus Jakarta Sans', sans-serif;
   user-select: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ==========================================================================
+   REGLAS GLOBALES PARA LA ESTÉTICA PERSONALIZADA DEL LABORATORIO DEL OPERADOR
+   ========================================================================== */
+
+body[data-custom-theme="true"] {
+  background-color: var(--custom-bg) !important;
+  color: var(--custom-text) !important;
+}
+
+/* Forzar que todos los contenedores y tarjetas principales adopten el color personalizado */
+body[data-custom-theme="true"] div,
+body[data-custom-theme="true"] section,
+body[data-custom-theme="true"] header,
+body[data-custom-theme="true"] aside,
+body[data-custom-theme="true"] article {
+  background-color: var(--custom-container) !important;
+  color: var(--custom-text) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Excepciones para que las tablas, inputs y botones mantengan contraste y legibilidad */
+body[data-custom-theme="true"] input,
+body[data-custom-theme="true"] select,
+body[data-custom-theme="true"] textarea {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+  color: var(--custom-text) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Botones principales del sistema adaptados al color de botones elegido por el operador */
+body[data-custom-theme="true"] button.bg-amber-500,
+body[data-custom-theme="true"] button[class*="bg-amber"] {
+  background-color: var(--custom-btn) !important;
+  color: #000000 !important;
 }
