@@ -19,7 +19,6 @@ export default function SidebarCreador({
   setEstacionActiva,
   handleCerrarSesion,
 }: SidebarCreadorProps) {
-  // Estado para el selector de estética / tema visual
   const [esteticaActual, setEsteticaActual] = useState<"oscuro" | "claro" | "sistema">("oscuro");
 
   const estacionesCreador = [
