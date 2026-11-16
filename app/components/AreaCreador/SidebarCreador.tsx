@@ -1,14 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  Crown, ChevronLeft, 
-  User, Settings, LogOut, LayoutDashboard 
-} from "lucide-react";
 
 interface SidebarCreadorProps {
-  areaActiva: "usuario" | "superuser" | "creador";
-  onChangeArea: (area: "usuario" | "superuser" | "creador") => void;
+  areaActiva: string;
+  onChangeArea: (nuevaArea: "usuario" | "superuser" | "creador") => void;
   rolActivo: string;
   estacionActiva: string;
   setEstacionActiva: (estacion: string) => void;
@@ -23,134 +19,170 @@ export default function SidebarCreador({
   setEstacionActiva,
   handleCerrarSesion,
 }: SidebarCreadorProps) {
-  const [colapsado, setColapsado] = useState<boolean>(false);
+  // Estado para el selector de estética / tema visual
+  const [esteticaActual, setEsteticaActual] = useState<"oscuro" | "claro" | "sistema">("oscuro");
 
-  const esCreadorOrSuper = rolActivo === "superuser";
-  const esTecnicoOIngeniero = rolActivo === "ingeniero" || rolActivo === "tecnico";
+  const estacionesCreador = [
+    { id: "AC01", label: "AC01 — Master Kernel", icon: "👑" },
+    { id: "AC02", label: "AC02 — Gestión de Módulos", icon: "📊" },
+    { id: "AC03", label: "AC03 — Laboratorio HMI", icon: "🧪" },
+    { id: "AC04", label: "AC04 — Staff & Licencias", icon: "👥" },
+    { id: "AC05", label: "AC05 — Diagnóstico & Logs", icon: "📡" },
+    { id: "AC06", label: "AC06 — Despliegue & Git", icon: "⚙️" },
+  ];
+
+  const handleActualizarApp = () => {
+    window.location.reload();
+  };
+
+  const cambiarTema = (modo: "oscuro" | "claro" | "sistema") => {
+    setEsteticaActual(modo);
+    if (modo === "claro") {
+      document.documentElement.classList.remove("dark");
+    } else {
+      document.documentElement.classList.add("dark");
+    }
+    alert(`🎨 Tema visual ajustado a: ${modo.toUpperCase()}`);
+  };
 
   return (
-    <aside 
-      className={`bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 select-none transition-all duration-300 relative z-40 ${
-        colapsado ? "w-16" : "w-64"
-      }`}
-    >
-      {/* CABECERA CON CORONA (COLLAPSE) */}
-      <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/40">
-        <div className="flex items-center gap-2 overflow-hidden">
-          <button
-            onClick={() => setColapsado(!colapsado)}
-            className="p-2 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 transition-all cursor-pointer flex items-center justify-center shadow-lg shrink-0 hover:bg-amber-500/20"
-            title={colapsado ? "Desplegar Barra" : "Contraer Barra"}
-          >
-            <Crown className="w-4 h-4"/>
-          </button>
-          {!colapsado && (
-            <div className="leading-tight truncate">
-              <span className="font-extrabold text-[10px] uppercase tracking-wider block text-white">
-                ÁREA DEL CREADOR
-              </span>
-              <span className="text-[9px] text-slate-400 block truncate">
-                Synapse-X OS-AI
-              </span>
-            </div>
-          )}
+    <aside className="w-72 bg-slate-950 border-r border-amber-500/30 flex flex-col h-full font-sans select-none shrink-0">
+      
+      {/* CABECERA DEL SIDEBAR */}
+      <div className="p-4 border-b border-amber-500/20 bg-slate-900/50">
+        <div className="flex items-center justify-between">
+          <span className="px-2 py-0.5 bg-amber-500 text-black font-black text-[10px] rounded uppercase font-mono">
+            OSAI KERNEL
+          </span>
+          <span className="text-[10px] font-mono text-emerald-400">● LIVE</span>
         </div>
-        {!colapsado && (
-          <button 
-            onClick={() => setColapsado(true)} 
-            className="text-slate-500 hover:text-slate-300 p-1 cursor-pointer"
-          >
-            <ChevronLeft className="w-4 h-4"/>
-          </button>
-        )}
+        <h2 className="text-sm font-black text-amber-400 uppercase tracking-wider mt-2 font-mono">
+          Synapse-X Creador
+        </h2>
+        <p className="text-[10px] text-slate-400 mt-0.5">Control Total del Sistema</p>
       </div>
 
-      {/* NAVEGACIÓN DEL ÁREA DEL CREADOR (AC) */}
-      <div className="p-3 flex-1 overflow-y-auto space-y-1.5">
-        {!colapsado && (
-          <span className="text-[9px] font-mono uppercase tracking-widest text-slate-500 px-1 block mb-1">
-            Gobernanza Root
-          </span>
-        )}
+      {/* SELECTOR DE ÁREAS PRINCIPALES */}
+      <div className="p-3 border-b border-slate-800 bg-black/40 grid grid-cols-3 gap-1">
         <button
           type="button"
-          onClick={() => setEstacionActiva("AC01")}
-          className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-left ${
-            estacionActiva === "AC01"
-              ? "bg-amber-500 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
-              : "bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
+          onClick={() => onChangeArea("creador")}
+          className={`py-1.5 px-1 rounded text-[10px] font-bold transition-all cursor-pointer ${
+            areaActiva === "creador"
+              ? "bg-amber-500 text-slate-950 font-black shadow-md"
+              : "bg-slate-900 text-slate-400 hover:bg-slate-800"
           }`}
         >
-          <Crown className="w-4 h-4 shrink-0 text-amber-400"/>
-          {!colapsado && <span className="truncate">Portal AC01</span>}
+          👑 Creador
+        </button>
+        <button
+          type="button"
+          onClick={() => onChangeArea("superuser")}
+          className={`py-1.5 px-1 rounded text-[10px] font-bold transition-all cursor-pointer ${
+            areaActiva === "superuser"
+              ? "bg-cyan-500 text-slate-950 font-black shadow-md"
+              : "bg-slate-900 text-slate-400 hover:bg-slate-800"
+          }`}
+        >
+          🛡️ Superuser
+        </button>
+        <button
+          type="button"
+          onClick={() => onChangeArea("usuario")}
+          className={`py-1.5 px-1 rounded text-[10px] font-bold transition-all cursor-pointer ${
+            areaActiva === "usuario"
+              ? "bg-purple-500 text-slate-950 font-black shadow-md"
+              : "bg-slate-900 text-slate-400 hover:bg-slate-800"
+          }`}
+        >
+          ⚡ Operación
         </button>
       </div>
 
-      {/* PARTE INFERIOR INAMOVIBLE: BOTONES DE CAMBIO DE ÁREA POR ROL */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/80 space-y-1.5">
-        {!colapsado && (
-          <span className="text-[9px] font-mono uppercase tracking-widest text-slate-500 px-1 block mb-1">
-            Cambio de Área
-          </span>
-        )}
-
-        {/* 1. Botón Creador */}
-        {esCreadorOrSuper && (
+      {/* NAVEGACIÓN DE LAS 6 ESTACIONES DEL CREADOR (AC01 - AC06) */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+        <div className="text-[10px] font-mono font-bold text-amber-500/80 px-2 uppercase tracking-wider mb-2">
+          Estaciones de Control (6)
+        </div>
+        
+        {estacionesCreador.map((est) => (
           <button
+            key={est.id}
             type="button"
-            onClick={() => {
-              onChangeArea("creador");
-              setEstacionActiva("AC01");
-            }}
-            className="w-full flex items-center gap-2.5 p-2 rounded-lg text-xs transition-all cursor-pointer font-bold bg-amber-500/30 border border-amber-500/40 text-amber-300"
-            title="Ir a Área del Creador (AC01)"
+            onClick={() => setEstacionActiva(est.id)}
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+              estacionActiva === est.id
+                ? "bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-lg"
+                : "text-slate-300 hover:bg-slate-900 border border-transparent"
+            }`}
           >
-            <Crown className="w-3.5 h-3.5 shrink-0"/>
-            {!colapsado && <span className="truncate">Área de Creador</span>}
+            <span className="text-sm">{est.icon}</span>
+            <span className="font-mono">{est.label}</span>
           </button>
-        )}
+        ))}
+      </div>
 
-        {/* 2. Botón Superuser */}
-        {(esCreadorOrSuper || esTecnicoOIngeniero) && (
-          <button
-            type="button"
-            onClick={() => {
-              onChangeArea("superuser");
-              setEstacionActiva("SU01");
-            }}
-            className="w-full flex items-center gap-2.5 p-2 rounded-lg text-xs transition-all cursor-pointer font-bold bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-400"
-            title="Ir a Área de Superuser (SU01)"
-          >
-            <Settings className="w-3.5 h-3.5 shrink-0"/>
-            {!colapsado && <span className="truncate">Área de Superuser</span>}
-          </button>
-        )}
-
-        {/* 3. Botón Usuario */}
+      {/* ZONA INFERIOR: CONTROLES DE ESTÉTICA, ACTUALIZACIÓN Y SALIDA */}
+      <div className="p-3 border-t border-slate-800 bg-slate-950 space-y-2.5">
+        
+        {/* BOTÓN DE ACTUALIZAR APP */}
         <button
           type="button"
-          onClick={() => {
-            onChangeArea("usuario");
-            setEstacionActiva("AU01");
-          }}
-          className="w-full flex items-center gap-2.5 p-2 rounded-lg text-xs transition-all cursor-pointer font-bold bg-slate-900 hover:bg-slate-800 border border-slate-800 text-purple-400"
-          title="Ir a Área de Usuario (AU01)"
+          onClick={handleActualizarApp}
+          className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/30 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow"
+          title="Recargar la aplicación por completo"
         >
-          <User className="w-3.5 h-3.5 shrink-0"/>
-          {!colapsado && <span className="truncate">Área de Usuario</span>}
+          <span>🔄</span> Actualizar Sistema
         </button>
 
-        {/* Botón de Cierre de Sesión */}
+        {/* CONTROLES DE ESTÉTICA Y TEMAS (Claro / Oscuro / Sistema) */}
+        <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-800 space-y-1.5">
+          <div className="text-[10px] font-bold text-slate-400 flex items-center justify-between px-1">
+            <span>🎨 Estética / Tema:</span>
+            <span className="text-amber-400 uppercase text-[9px]">{esteticaActual}</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            <button
+              type="button"
+              onClick={() => cambiarTema("claro")}
+              className={`py-1 rounded text-[10px] font-bold transition-all cursor-pointer border ${
+                esteticaActual === "claro" ? "bg-amber-500 text-black border-amber-400" : "bg-black text-slate-400 border-slate-800"
+              }`}
+            >
+              ☀️ Claro
+            </button>
+            <button
+              type="button"
+              onClick={() => cambiarTema("oscuro")}
+              className={`py-1 rounded text-[10px] font-bold transition-all cursor-pointer border ${
+                esteticaActual === "oscuro" ? "bg-amber-500 text-black border-amber-400" : "bg-black text-slate-400 border-slate-800"
+              }`}
+            >
+              🌙 Oscuro
+            </button>
+            <button
+              type="button"
+              onClick={() => cambiarTema("sistema")}
+              className={`py-1 rounded text-[10px] font-bold transition-all cursor-pointer border ${
+                esteticaActual === "sistema" ? "bg-amber-500 text-black border-amber-400" : "bg-black text-slate-400 border-slate-800"
+              }`}
+            >
+              💻 Sistema
+            </button>
+          </div>
+        </div>
+
+        {/* BOTÓN DE CERRAR SESIÓN */}
         <button
           type="button"
           onClick={handleCerrarSesion}
-          className="w-full flex items-center gap-2.5 p-2 rounded-lg bg-rose-950/40 hover:bg-rose-950/80 border border-rose-900/50 text-rose-400 transition-all cursor-pointer font-bold text-xs mt-1"
-          title="Cerrar Sesión"
+          className="w-full py-2 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
         >
-          <LogOut className="w-3.5 h-3.5 shrink-0"/>
-          {!colapsado && <span className="truncate">Cierre de Sesión</span>}
+          <span>🚪</span> Cerrar Sesión (Root)
         </button>
+
       </div>
+
     </aside>
   );
 }
