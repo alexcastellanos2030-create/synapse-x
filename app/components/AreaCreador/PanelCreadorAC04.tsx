@@ -2,7 +2,16 @@
 
 import React, { useState } from "react";
 import { UsuarioRegistrado } from "../../page";
-import { AlertaSistema } from "../Usuario/PanelAlertasGlobales"; // <-- Ruta corregida hacia la carpeta components
+
+// Definición local de AlertaSistema para eliminar errores de importación externa
+export interface AlertaSistema {
+  id: string;
+  modulo: string;
+  tipo: "INFO" | "ADVERTENCIA" | "BLOQUEO" | "CRÍTICO";
+  nivel: number;
+  mensaje: string;
+  timestamp: string;
+}
 
 interface AC04Props {
   usuarios: UsuarioRegistrado[];

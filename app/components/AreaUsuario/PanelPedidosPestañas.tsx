@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "../../lib/supabase";
 
 export interface PedidoRecepcionado {
   idPedido: string;
@@ -286,7 +286,7 @@ export default function RecepcionPedidosPage({ esSuperuser = true }: RecepcionPe
       fechaEntrega,
       modalidad,
       lineasPedido: lineasValidas,
-      responsableRegistro: nombreResponsable, // <--- Solo dejamos esta propiedad correcta
+      responsableRegistro: nombreResponsable,
       nivelSeguridad: nivelSeguridadPedido,
     };
 
@@ -469,7 +469,7 @@ export default function RecepcionPedidosPage({ esSuperuser = true }: RecepcionPe
           </div>
         </div>
 
-        {/* SECCIÓN 2: ESPECIFICACIONES TÉCNICAS DEL PEDIDO (EN LÍNEA + MICROBOTÓN + OBSERVACIONES ABAJO) */}
+        {/* SECCIÓN 2: ESPECIFICACIONES TÉCNICAS DEL PEDIDO */}
         <div className="bg-zinc-950 p-5 rounded-2xl border border-zinc-800 space-y-4 shadow-xl">
           <div className="border-b border-zinc-800 pb-2 flex items-center justify-between text-amber-400 font-black text-xs uppercase tracking-wider font-mono">
             <span className="flex items-center gap-2">🥖 2. ESPECIFICACIONES TÉCNICAS DEL PEDIDO (MULTILÍNEA)</span>
@@ -480,7 +480,6 @@ export default function RecepcionPedidosPage({ esSuperuser = true }: RecepcionPe
             {lineasPedido.map((linea, index) => (
               <div key={linea.id} className="p-4 bg-black/60 border border-zinc-800 rounded-2xl space-y-3">
                 
-                {/* FILA EN UNA SOLA LÍNEA HORIZONTAL CON MICROBOTÓN AL FINAL */}
                 <div className="flex flex-col md:flex-row items-center gap-3">
                   <span className="text-xs font-mono font-bold text-amber-500 w-6">
                     #{index + 1}
@@ -561,7 +560,6 @@ export default function RecepcionPedidosPage({ esSuperuser = true }: RecepcionPe
                     />
                   </div>
 
-                  {/* MICROBOTÓN NARANJA / BLANCO AL FINAL DE LA LÍNEA PARA AGREGAR NUEVO PEDIDO */}
                   <button
                     type="button"
                     onClick={agregarLineaPedido}
@@ -572,7 +570,6 @@ export default function RecepcionPedidosPage({ esSuperuser = true }: RecepcionPe
                     <span>Agregar Pedido</span>
                   </button>
 
-                  {/* Eliminar línea */}
                   {lineasPedido.length > 1 && (
                     <button
                       type="button"
@@ -585,7 +582,6 @@ export default function RecepcionPedidosPage({ esSuperuser = true }: RecepcionPe
                   )}
                 </div>
 
-                {/* CAMPO DE OBSERVACIÓN UBICADO JUSTO DEBAJO DEL PRODUCTO SOLICITADO */}
                 <div className="pl-0 md:pl-8 pt-1">
                   <input
                     type="text"

@@ -6,6 +6,15 @@ import SidebarSuperUser from "./components/AreaSuperUser/SidebarSuperUser";
 import SidebarCreador from "./components/AreaCreador/SidebarCreador";
 import RegistrodePedidos from "./components/AreaUsuario/RegistrodePedidos";
 
+// Definición oficial exportada de la estructura de usuarios para todo el sistema
+export interface UsuarioRegistrado {
+  nombre: string;
+  cedula: string;
+  clave: string;
+  rol: "admin" | "operario" | "cajera" | "supervisor" | "superuser" | "ingeniero" | "tecnico";
+  bloqueado?: boolean;
+}
+
 export default function SynapseOS() {
   const [autenticado, setAutenticado] = useState<boolean>(true);
   const [rolActivo, setRolActivo] = useState<string>("superuser");

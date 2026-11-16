@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { UsuarioRegistrado } from "../page";
-import { supabase } from "../lib/supabase";
+import { UsuarioRegistrado } from "../../page";
+import { supabase } from "../../lib/supabase";
 
 interface OperarioLoginProps {
   usuarios: UsuarioRegistrado[];
