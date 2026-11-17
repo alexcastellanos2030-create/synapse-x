@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import { 
   Settings, ChevronLeft, 
-  User, Crown, LogOut, LayoutDashboard 
+  User, Crown, LayoutDashboard 
 } from "lucide-react";
+import BotoneraInferior from "../BotoneraInferior";
 
 interface SidebarSuperuserProps {
   areaActiva: "usuario" | "superuser" | "creador";
@@ -24,10 +25,10 @@ export default function SidebarSuperuser({
   handleCerrarSesion,
 }: SidebarSuperuserProps) {
   const [colapsado, setColapsado] = useState<boolean>(false);
+  const [acentoColor, setAcentoColor] = useState<"amber" | "emerald" | "orange">("emerald");
 
   // Verificación de roles para los botones inferiores
-  const esCreadorOrSuper = rolActivo === "superuser";
-  const esTecnicoOIngeniero = rolActivo === "ingeniero" || rolActivo === "tecnico";
+  const esCreadorOrSuper = rolActivo === "superuser" || rolActivo === "admin";
 
   return (
     <aside 
@@ -111,7 +112,7 @@ export default function SidebarSuperuser({
           </button>
         )}
 
-        {/* 2. Botón Superuser (Visible para Creador, Ingenieros y Técnicos) */}
+        {/* 2. Botón Superuser */}
         <button
           type="button"
           onClick={() => {
@@ -138,18 +139,16 @@ export default function SidebarSuperuser({
           <User className="w-3.5 h-3.5 shrink-0"/>
           {!colapsado && <span className="truncate">Área de Usuario</span>}
         </button>
-
-        {/* Botón de Cierre de Sesión */}
-        <button
-          type="button"
-          onClick={handleCerrarSesion}
-          className="w-full flex items-center gap-2.5 p-2 rounded-lg bg-rose-950/40 hover:bg-rose-950/80 border border-rose-900/50 text-rose-400 transition-all cursor-pointer font-bold text-xs mt-1"
-          title="Cerrar Sesión"
-        >
-          <LogOut className="w-3.5 h-3.5 shrink-0"/>
-          {!colapsado && <span className="truncate">Cierre de Sesión</span>}
-        </button>
       </div>
+
+      {/* BOTONERÁ INFERIOR COMPARTIDA (Actualizar, Temas y Estética LED) */}
+      {!colapsado && (
+        <BotoneraInferior
+          onCerrarSesion={handleCerrarSesion}
+          acentoColor={acentoColor}
+          onChangeAcento={setAcentoColor}
+        />
+      )}
     </aside>
   );
 }

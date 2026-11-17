@@ -6,6 +6,7 @@ import SidebarSuperUser from "./components/AreaSuperUser/SidebarSuperUser";
 import SidebarCreador from "./components/AreaCreador/SidebarCreador";
 import RegistrodePedidos from "./components/AreaUsuario/RegistrodePedidos";
 import PanelCreadorAC04, { AlertaSistema } from "./components/AreaCreador/PanelCreadorAC04";
+import CentroMandoCreador from "./components/AreaCreador/CentroMandoCreador";
 import { supabase } from "./lib/supabase";
 
 // Definición oficial exportada de la estructura de usuarios para todo el sistema
@@ -22,7 +23,8 @@ export default function SynapseOS() {
   const [rolActivo, setRolActivo] = useState<string>("superuser");
   
   const [areaActiva, setAreaActiva] = useState<"usuario" | "superuser" | "creador">("creador");
-  const [estacionActiva, setEstacionActiva] = useState<string>("AC01");
+  // Iniciamos en AC00 (Portada Maestra / Índice del Creador)
+  const [estacionActiva, setEstacionActiva] = useState<string>("AC00");
 
   const [usuarios, setUsuarios] = useState<UsuarioRegistrado[]>([
     { nombre: "Alexander Castellanos", cedula: "10433935", clave: "1234", rol: "superuser", bloqueado: false },
@@ -120,7 +122,7 @@ export default function SynapseOS() {
           areaActiva={areaActiva}
           onChangeArea={(nuevaArea) => {
             setAreaActiva(nuevaArea);
-            if (nuevaArea === "creador") setEstacionActiva("AC01");
+            if (nuevaArea === "creador") setEstacionActiva("AC00");
             if (nuevaArea === "usuario") setEstacionActiva("AU01");
           }}
           rolActivo={rolActivo}
@@ -135,7 +137,7 @@ export default function SynapseOS() {
           areaActiva={areaActiva}
           onChangeArea={(nuevaArea) => {
             setAreaActiva(nuevaArea);
-            if (nuevaArea === "creador") setEstacionActiva("AC01");
+            if (nuevaArea === "creador") setEstacionActiva("AC00");
             if (nuevaArea === "superuser") setEstacionActiva("SU01");
           }}
           rolActivo={rolActivo}
@@ -148,69 +150,12 @@ export default function SynapseOS() {
       {/* ÁREA DE VISUALIZACIÓN DE PANTALLAS PRINCIPALES */}
       <main className="flex-1 flex flex-col h-full overflow-y-auto p-4 sm:p-8 bg-black text-white w-full items-center">
         
-        {/* PANTALLA CREADOR: AC01 — Master Kernel */}
-        {areaActiva === "creador" && estacionActiva === "AC01" && (
-          <div className="max-w-xl w-full p-12 text-center border border-amber-500/30 bg-slate-950 rounded-2xl space-y-3 shadow-2xl my-auto">
-            <span className="px-3 py-1 bg-amber-500/20 text-amber-300 font-mono text-xs rounded-full border border-amber-500/40">
-              👑 ÁREA DEL CREADOR — MASTER KERNEL
-            </span>
-            <h1 className="text-2xl font-black text-white tracking-wider uppercase">Portal AC01</h1>
-            <p className="text-slate-400 text-xs italic">Núcleo principal del sistema operativo industrial OSAI.</p>
-          </div>
-        )}
-
-        {/* PANTALLA CREADOR: AC02 — Gestión de Módulos */}
-        {areaActiva === "creador" && estacionActiva === "AC02" && (
-          <div className="max-w-xl w-full p-12 text-center border border-amber-500/30 bg-slate-950 rounded-2xl space-y-3 shadow-2xl my-auto">
-            <span className="px-3 py-1 bg-amber-500/20 text-amber-300 font-mono text-xs rounded-full border border-amber-500/40">
-              📊 ÁREA DEL CREADOR — GESTIÓN DE MÓDULOS
-            </span>
-            <h1 className="text-2xl font-black text-white tracking-wider uppercase">Portal AC02</h1>
-            <p className="text-slate-400 text-xs italic">Panel de control y activación de submódulos de producción.</p>
-          </div>
-        )}
-
-        {/* PANTALLA CREADOR: AC03 — Laboratorio HMI */}
-        {areaActiva === "creador" && estacionActiva === "AC03" && (
-          <div className="max-w-xl w-full p-12 text-center border border-amber-500/30 bg-slate-950 rounded-2xl space-y-3 shadow-2xl my-auto">
-            <span className="px-3 py-1 bg-amber-500/20 text-amber-300 font-mono text-xs rounded-full border border-amber-500/40">
-              🧪 ÁREA DEL CREADOR — LABORATORIO HMI
-            </span>
-            <h1 className="text-2xl font-black text-white tracking-wider uppercase">Portal AC03</h1>
-            <p className="text-slate-400 text-xs italic">Simulación de interfaz hombre-máquina y gemelo digital.</p>
-          </div>
-        )}
-
-        {/* PANTALLA CREADOR: AC04 — Staff & Licencias */}
-        {areaActiva === "creador" && estacionActiva === "AC04" && (
-          <PanelCreadorAC04
-            usuarios={usuarios}
-            onGuardarUsuario={handleGuardarUsuario}
-            onActualizarEstadoUsuario={handleActualizarEstadoUsuario}
-            onAgregarAlerta={handleAgregarAlerta}
+        {/* ÁREA DEL CREADOR: CENTRO DE MANDO Y PORTALES AC00 A AC07 */}
+        {areaActiva === "creador" && (
+          <CentroMandoCreador
+            estacionActiva={estacionActiva}
+            setEstacionActiva={setEstacionActiva}
           />
-        )}
-
-        {/* PANTALLA CREADOR: AC05 — Diagnóstico & Logs */}
-        {areaActiva === "creador" && estacionActiva === "AC05" && (
-          <div className="max-w-xl w-full p-12 text-center border border-amber-500/30 bg-slate-950 rounded-2xl space-y-3 shadow-2xl my-auto">
-            <span className="px-3 py-1 bg-amber-500/20 text-amber-300 font-mono text-xs rounded-full border border-amber-500/40">
-              📡 ÁREA DEL CREADOR — DIAGNÓSTICO & LOGS
-            </span>
-            <h1 className="text-2xl font-black text-white tracking-wider uppercase">Portal AC05</h1>
-            <p className="text-slate-400 text-xs italic">Monitoreo de telemetría y registro de eventos del sistema.</p>
-          </div>
-        )}
-
-        {/* PANTALLA CREADOR: AC06 — Despliegue & Git */}
-        {areaActiva === "creador" && estacionActiva === "AC06" && (
-          <div className="max-w-xl w-full p-12 text-center border border-amber-500/30 bg-slate-950 rounded-2xl space-y-3 shadow-2xl my-auto">
-            <span className="px-3 py-1 bg-amber-500/20 text-amber-300 font-mono text-xs rounded-full border border-amber-500/40">
-              ⚙️ ÁREA DEL CREADOR — DESPLIEGUE & GIT
-            </span>
-            <h1 className="text-2xl font-black text-white tracking-wider uppercase">Portal AC06</h1>
-            <p className="text-slate-400 text-xs italic">Control de versiones, ramas y sincronización con Vercel.</p>
-          </div>
         )}
 
         {/* PANTALLA SUPERUSER: SU01 */}
