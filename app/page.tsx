@@ -30,35 +30,27 @@ const CLAVES_SESION = [
 const ESTILOS_PORTAL: Record<
   Exclude<PortalTipo, "creador">,
   {
-    card: string;
     ledBarText: string;
     titulo: string;
-    subtitulo: string;
     focusInput: string;
     emblema: string;
   }
 > = {
   ingeniero: {
-    card: "bg-[#06111f] border-cyan-500/45 shadow-[0_0_28px_rgba(6,182,212,0.12)]",
-    ledBarText: "text-cyan-300",
-    titulo: "text-cyan-300",
-    subtitulo: "text-cyan-200/70",
+    ledBarText: "text-cyan-400",
+    titulo: "text-cyan-400",
     focusInput: "focus:border-cyan-400",
     emblema: "⚙️",
   },
   tecnico: {
-    card: "bg-[#140d06] border-amber-500/45 shadow-[0_0_28px_rgba(245,158,11,0.12)]",
-    ledBarText: "text-amber-300",
-    titulo: "text-amber-300",
-    subtitulo: "text-amber-200/70",
+    ledBarText: "text-amber-400",
+    titulo: "text-amber-400",
     focusInput: "focus:border-amber-400",
     emblema: "🔧",
   },
   usuario: {
-    card: "bg-[#140711] border-pink-500/45 shadow-[0_0_28px_rgba(236,72,153,0.12)]",
-    ledBarText: "text-pink-300",
-    titulo: "text-pink-300",
-    subtitulo: "text-pink-200/70",
+    ledBarText: "text-pink-400",
+    titulo: "text-pink-400",
     focusInput: "focus:border-pink-400",
     emblema: "🏭",
   },
@@ -288,10 +280,8 @@ function PortalAccesoSimpleLED({
   };
 
   return (
-    <div
-      className={`w-full max-w-2xl border rounded-2xl p-6 shadow-2xl relative font-mono text-slate-100 transition-colors ${estilo.card}`}
-    >
-      <div className="mb-4 pb-3 border-b border-slate-800/90 flex items-center justify-between bg-black/60 px-4 py-2.5 rounded-xl">
+    <div className="w-full max-w-2xl bg-[#070d1a] border border-slate-800 rounded-2xl p-6 shadow-2xl relative font-mono text-slate-100">
+      <div className="mb-4 pb-3 border-b border-slate-800 flex items-center justify-between bg-black/60 px-4 py-2.5 rounded-xl">
         <span className={`text-[11px] font-bold uppercase tracking-widest ${estilo.ledBarText}`}>
           ESTADO LED:
         </span>
@@ -329,7 +319,7 @@ function PortalAccesoSimpleLED({
         >
           {estilo.emblema} {titulo} {estilo.emblema}
         </h1>
-        <p className={`text-[11px] mt-2 ${estilo.subtitulo}`}>{subtitulo}</p>
+        <p className="text-[11px] text-slate-400 mt-2">{subtitulo}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
@@ -517,33 +507,33 @@ export default function Home() {
   if (!autenticado) {
     return (
       <div className="min-h-screen bg-[#030712] text-slate-100 font-mono flex flex-col md:flex-row selection:bg-cyan-500 selection:text-black">
-        {/* Barra lateral izquierda dedicada con título y los 4 portales */}
-        <aside className="w-full md:w-96 shrink-0 border-b md:border-b-0 md:border-r border-slate-800/90 bg-slate-950/95 p-5 flex flex-col justify-between">
-          <div className="space-y-5">
-            <div className="pb-4 border-b border-slate-800/80">
-              <div className="flex items-center space-x-2.5">
-                <span className="inline-block w-3 h-3 rounded-full bg-cyan-400 animate-pulse shrink-0"></span>
-                <h1 className="text-sm font-bold tracking-widest text-cyan-300 uppercase">
-                  SYNAPSE-X OS
+        {/* Barra lateral izquierda compacta (dividida en cuatro) con título y los 4 portales */}
+        <aside className="w-full md:w-28 shrink-0 border-b md:border-b-0 md:border-r border-slate-800/90 bg-slate-950/95 p-2 flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="pb-2 border-b border-slate-800/80 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0"></span>
+                <h1 className="text-[10px] font-bold tracking-wider text-cyan-300 uppercase truncate">
+                  SYNAPSE-X
                 </h1>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1.5 leading-snug">
-                Selector Central de Portales de Acceso
+              <p className="text-[8px] text-slate-400 mt-0.5 leading-tight">
+                Portales Acceso
               </p>
             </div>
 
-            <nav className="flex flex-col gap-3" aria-label="Selector de Portales">
+            <nav className="flex flex-row md:flex-col gap-1.5" aria-label="Selector de Portales">
               <button
                 type="button"
                 onClick={() => cambiarPortal("creador")}
-                className={`w-full text-left px-4 py-3.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                className={`flex-1 md:w-full text-left px-2 py-2 rounded-lg font-extrabold transition-all cursor-pointer flex items-center justify-between gap-1 ${
                   portalSeleccionado === "creador"
-                    ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/20"
+                    ? "bg-emerald-500 text-black shadow-md shadow-emerald-500/20"
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span className="text-xl md:text-[22px] leading-tight animate-pulse">
-                  👑 Portal Creador
+                <span className="text-lg md:text-[22px] leading-tight animate-pulse truncate">
+                  👑 Creador
                 </span>
                 <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
                   4 LED
@@ -553,14 +543,14 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => cambiarPortal("ingeniero")}
-                className={`w-full text-left px-4 py-3.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                className={`flex-1 md:w-full text-left px-2 py-2 rounded-lg font-extrabold transition-all cursor-pointer flex items-center justify-between gap-1 ${
                   portalSeleccionado === "ingeniero"
-                    ? "bg-cyan-500 text-black shadow-lg shadow-cyan-500/20"
+                    ? "bg-cyan-500 text-black shadow-md shadow-cyan-500/20"
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span className="text-xl md:text-[22px] leading-tight animate-pulse">
-                  ⚙️ Portal Ingeniero (ST)
+                <span className="text-lg md:text-[22px] leading-tight animate-pulse truncate">
+                  ⚙️ Ing (ST)
                 </span>
                 <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
                   3 LED
@@ -570,14 +560,14 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => cambiarPortal("tecnico")}
-                className={`w-full text-left px-4 py-3.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                className={`flex-1 md:w-full text-left px-2 py-2 rounded-lg font-extrabold transition-all cursor-pointer flex items-center justify-between gap-1 ${
                   portalSeleccionado === "tecnico"
-                    ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20"
+                    ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span className="text-xl md:text-[22px] leading-tight animate-pulse">
-                  🔧 Portal Técnico (ST)
+                <span className="text-lg md:text-[22px] leading-tight animate-pulse truncate">
+                  🔧 Téc (ST)
                 </span>
                 <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
                   3 LED
@@ -587,14 +577,14 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => cambiarPortal("usuario")}
-                className={`w-full text-left px-4 py-3.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                className={`flex-1 md:w-full text-left px-2 py-2 rounded-lg font-extrabold transition-all cursor-pointer flex items-center justify-between gap-1 ${
                   portalSeleccionado === "usuario"
-                    ? "bg-pink-500 text-black shadow-lg shadow-pink-500/20"
+                    ? "bg-pink-500 text-black shadow-md shadow-pink-500/20"
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span className="text-xl md:text-[22px] leading-tight animate-pulse">
-                  🏭 Portal Empresa / Operadores
+                <span className="text-lg md:text-[22px] leading-tight animate-pulse truncate">
+                  🏭 Empresa
                 </span>
                 <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
                   3 LED
@@ -603,8 +593,8 @@ export default function Home() {
             </nav>
           </div>
 
-          <div className="pt-4 mt-6 border-t border-slate-900 text-[10px] text-slate-500 leading-relaxed">
-            SYNAPSE-X OS Industrial Automation © 2026 — Todos los derechos reservados.
+          <div className="hidden md:block pt-2 mt-4 border-t border-slate-900 text-[8px] text-slate-500 leading-tight">
+            SYNAPSE-X OS © 2026
           </div>
         </aside>
 
@@ -612,7 +602,7 @@ export default function Home() {
         <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8">
           <div className="w-full max-w-2xl flex flex-col items-center">
             {portalSeleccionado === "creador" && (
-              <div className="w-full flex flex-col items-center [&>div]:border-emerald-500/45 [&>div]:bg-[#06140f] [&>div]:shadow-[0_0_28px_rgba(16,185,129,0.12)] [&_h1]:!text-xl [&_h1]:md:!text-2xl [&_h1]:!leading-tight [&_h1]:!text-emerald-400">
+              <div className="w-full flex flex-col items-center [&>div]:border-slate-800 [&>div]:bg-[#070d1a] [&_h1]:!text-xl [&_h1]:md:!text-2xl [&_h1]:!leading-tight [&_h1]:!text-emerald-400">
                 <CreadorLogin
                   onLoginSuccess={(rol, cedula) => {
                     handleLoginSuccess(rol, cedula, "10");
