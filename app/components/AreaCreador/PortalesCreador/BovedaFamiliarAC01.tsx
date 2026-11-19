@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
-export interface MiembroFamiliar {
-  id: string;
+interface PerfilFamiliar {
+  id?: string;
   nombre: string;
   cedula: string;
   claveMaestra: string;
@@ -13,448 +13,519 @@ export interface MiembroFamiliar {
   bloqueado: boolean;
 }
 
-const CLAVE_STORAGE = "synapse_boveda_familiar_local_v2";
+const DESCRIPCION_NIVELES: Record<number, { titulo: string; detalle: string; etapa: string }> = {
+  1: {
+    titulo: 'Nivel 1 — Solo Ver (Inicio / Observación)',
+    detalle: 'Lectura de todas las áreas sin modificar ni registrar datos.',
+    etapa: 'Aprendizaje Guiado'
+  },
+  2: {
+    titulo: 'Nivel 2 — Ingreso de Datos Supervisado',
+    detalle: 'Carga y registro de datos básicos bajo supervisión directa.',
+    etapa: 'Aprendizaje Guiado'
+  },
+  3: {
+    titulo: 'Nivel 3 — Registro y Consulta Operativa',
+    detalle: 'Registros rutinarios y consultas sin tocar configuraciones ni claves.',
+    etapa: 'Aprendizaje Guiado'
+  },
+  4: {
+    titulo: 'Nivel 4 — Seguimiento y Verificación',
+    detalle: 'Revisión de registros, estados y movimientos diarios del sistema.',
+    etapa: 'Apoyo y Control Parcial'
+  },
+  5: {
+    titulo: 'Nivel 5 — Coordinación y Control Operativo',
+    detalle: 'Control operativo amplio en módulos habilitados, sin cambios estructurales.',
+    etapa: 'Apoyo y Control Parcial'
+  },
+  6: {
+    titulo: 'Nivel 6 — Supervisión Activa',
+    detalle: 'Supervisión remota de operaciones y flujos, sin ajustes críticos.',
+    etapa: 'Apoyo y Control Parcial'
+  },
+  7: {
+    titulo: 'Nivel 7 — Gestión Operativa Avanzada',
+    detalle: 'Manejo de controles avanzados del sistema con autonomía supervisada.',
+    etapa: 'Delegación Avanzada'
+  },
+  8: {
+    titulo: 'Nivel 8 — Superuser de Apoyo Crítico',
+    detalle: 'Alta capacidad de acción y supervisión sin tocar autoridad del Creador.',
+    etapa: 'Delegación Avanzada'
+  },
+  9: {
+    titulo: 'Nivel 9 — Sub-control Maestro (Máximo Delegable)',
+    detalle: 'Máximo nivel delegable en la bóveda familiar; subordinado al Nivel 10.',
+    etapa: 'Delegación Avanzada'
+  },
+  10: {
+    titulo: 'Nivel 10 — Creador y Superuser (Acceso Total)',
+    detalle: 'Exclusivo del Creador. Autoridad absoluta y control total del sistema.',
+    etapa: 'Cúspide Exclusiva'
+  }
+};
+
+const STORAGE_KEY = 'synapse_boveda_familiar_local_v2';
 
 export default function BovedaFamiliarAC01() {
-  const [familiares, setFamiliares] = useState<MiembroFamiliar[]>([]);
-  const [nombreFamInput, setNombreFamInput] = useState("");
-  const [cedulaFamInput, setCedulaFamInput] = useState("");
-  const [claveMaestraFamInput, setClaveMaestraFamInput] = useState("");
-  const [nivelFamInput, setNivelFamInput] = useState<number>(1);
-  const [busquedaFam, setBusquedaFam] = useState("");
-  const [idFamSeleccionado, setIdFamSeleccionado] = useState<string | null>(null);
-  const [modoAccion, setModoAccion] = useState<"crear" | "editar" | "ver">("crear");
-  const [mostrarClave, setMostrarClave] = useState<boolean>(false);
+  const [perfiles, setPerfiles] = useState<PerfilFamiliar[]>([]);
+  const [nombre, setNombre] = useState<string>('');
+  const [cedula, setCedula] = useState<string>('');
+  const [claveMaestra, setClaveMaestra] = useState<string>('');
+  const [nivel, setNivel] = useState<number>(1);
+  const [mensaje, setMensaje] = useState<{ tipo: 'ok' | 'error' | 'info'; texto: string } | null>(null);
+  const [cargando, setCargando] = useState<boolean>(true);
 
-  // CARGA HÍBRIDA ROBUSTA
+  const perfilCreadorBase: PerfilFamiliar = {
+    nombre: 'Alexander Segundo Castellanos Perozo',
+    cedula: '12345678',
+    claveMaestra: 'synapse2026',
+    nivel: 10,
+    rol: 'Creador / Superuser',
+    bloqueado: false
+  };
+
   useEffect(() => {
-    async function inicializarBoveda() {
-      let datos: MiembroFamiliar[] = [];
-
-      // 1. Intentar de localStorage
-      if (typeof window !== "undefined") {
-        const local = localStorage.getItem(CLAVE_STORAGE);
-        if (local) {
-          try {
-            datos = JSON.parse(local);
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      }
-
-      // 2. Intentar de Supabase
-      try {
-        const { data, error } = await supabase.from("boveda_familiar").select("*");
-        if (!error && data && data.length > 0) {
-          datos = data as MiembroFamiliar[];
-        }
-      } catch (err) {
-        console.error("Modo offline activado por red:", err);
-      }
-
-      // Si está vacío, asignar datos base
-      if (datos.length === 0) {
-        datos = [
-          { id: "FAM-01", nombre: "Hija 1", cedula: "V-26000001", claveMaestra: "H1#2026*", nivel: 1, rol: "Super User", bloqueado: false },
-          { id: "FAM-02", nombre: "Hija 2", cedula: "V-26000002", claveMaestra: "H2#2026*", nivel: 1, rol: "Super User", bloqueado: false },
-        ];
-      }
-
-      setFamiliares(datos);
-      if (typeof window !== "undefined") {
-        localStorage.setItem(CLAVE_STORAGE, JSON.stringify(datos));
-      }
-    }
-    inicializarBoveda();
+    cargarPerfiles();
   }, []);
 
-  const actualizarAlmacenamiento = (nuevaLista: MiembroFamiliar[]) => {
-    setFamiliares(nuevaLista);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(CLAVE_STORAGE, JSON.stringify(nuevaLista));
-    }
-  };
+  const cargarPerfiles = async () => {
+    setCargando(true);
+    let lista: PerfilFamiliar[] = [];
 
-  const limpiarFormularioFamiliar = () => {
-    setNombreFamInput("");
-    setCedulaFamInput("");
-    setClaveMaestraFamInput("");
-    setNivelFamInput(1);
-    setIdFamSeleccionado(null);
-    setModoAccion("crear");
-    setMostrarClave(false);
-  };
-
-  const accionCrearNuevo = () => {
-    limpiarFormularioFamiliar();
-    setModoAccion("crear");
-  };
-
-  // REGISTRAR NUEVO USUARIO
-  const accionRegistrarNuevo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nombreFamInput.trim() || !cedulaFamInput.trim() || !claveMaestraFamInput.trim()) {
-      alert("Por favor complete los campos obligatorios para registrar.");
-      return;
-    }
-
-    const nuevo: MiembroFamiliar = {
-      id: `FAM-${Date.now()}`,
-      nombre: nombreFamInput.trim(),
-      cedula: cedulaFamInput.trim(),
-      claveMaestra: claveMaestraFamInput.trim(),
-      nivel: Number(nivelFamInput),
-      rol: "Super User",
-      bloqueado: false,
-    };
-
-    const nuevaLista = [...familiares, nuevo];
-    actualizarAlmacenamiento(nuevaLista);
-
-    try {
-      await supabase.from("boveda_familiar").upsert([nuevo]);
-    } catch (err) {
-      console.error("Aviso de red en registro:", err);
-    }
-
-    alert("¡Usuario registrado con éxito en el sistema!");
-    limpiarFormularioFamiliar();
-  };
-
-  // GUARDAR CAMBIOS DE USUARIO EXISTENTE
-  const accionGuardarCambios = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!idFamSeleccionado) {
-      alert("Seleccione un usuario de la lista para guardar cambios.");
-      return;
-    }
-    if (!nombreFamInput.trim() || !cedulaFamInput.trim() || !claveMaestraFamInput.trim()) {
-      alert("Por favor complete los campos obligatorios.");
-      return;
-    }
-
-    const actualizados = familiares.map(f => f.id === idFamSeleccionado ? {
-      ...f,
-      nombre: nombreFamInput.trim(),
-      cedula: cedulaFamInput.trim(),
-      claveMaestra: claveMaestraFamInput.trim(),
-      nivel: Number(nivelFamInput),
-    } : f);
-
-    actualizarAlmacenamiento(actualizados);
-
-    try {
-      await supabase.from("boveda_familiar").update({
-        nombre: nombreFamInput.trim(),
-        cedula: cedulaFamInput.trim(),
-        claveMaestra: claveMaestraFamInput.trim(),
-        nivel: Number(nivelFamInput),
-        rol: "Super User",
-      }).eq("id", idFamSeleccionado);
-    } catch (err) {
-      console.error(err);
-    }
-
-    alert("¡Cambios guardados con éxito!");
-    limpiarFormularioFamiliar();
-  };
-
-  const seleccionarMiembroPorBusqueda = () => {
-    const encontrado = familiares.find(
-      (f) => f.cedula.toLowerCase().includes(busquedaFam.toLowerCase()) || f.nombre.toLowerCase().includes(busquedaFam.toLowerCase())
-    );
-    if (encontrado) {
-      setIdFamSeleccionado(encontrado.id);
-      setNombreFamInput(encontrado.nombre);
-      setCedulaFamInput(encontrado.cedula);
-      setClaveMaestraFamInput(encontrado.claveMaestra);
-      setNivelFamInput(encontrado.nivel);
-      setModoAccion("editar");
-      alert(`Usuario encontrado: ${encontrado.nombre}. Listo para editar y guardar.`);
-    } else {
-      alert("No se encontró ningún usuario con ese criterio de búsqueda.");
-    }
-  };
-
-  const accionVerSeleccionado = () => {
-    if (!idFamSeleccionado) {
-      alert("Seleccione un usuario de la lista primero.");
-      return;
-    }
-    setModoAccion("ver");
-  };
-
-  const accionEditarSeleccionado = () => {
-    if (!idFamSeleccionado) {
-      alert("Seleccione un usuario de la lista para editar.");
-      return;
-    }
-    setModoAccion("editar");
-  };
-
-  // ELIMINAR REGISTRO DE FORMA LIMPIA
-  const accionEliminarSeleccionado = async () => {
-    if (!idFamSeleccionado) {
-      alert("Seleccione un usuario para eliminar.");
-      return;
-    }
-    if (!confirm("¿Está seguro de eliminar este registro permanentemente?")) return;
-
-    const nuevaLista = familiares.filter(f => f.id !== idFamSeleccionado);
-    actualizarAlmacenamiento(nuevaLista);
-
-    try {
-      await supabase.from("boveda_familiar").delete().eq("id", idFamSeleccionado);
-    } catch (err) {
-      console.error("Error al eliminar en Supabase:", err);
-    }
-
-    alert("Registro eliminado con éxito.");
-    limpiarFormularioFamiliar();
-  };
-
-  const toggleBloqueoFamiliar = async (id: string) => {
-    const actualizados = familiares.map(f => f.id === id ? { ...f, bloqueado: !f.bloqueado } : f);
-    actualizarAlmacenamiento(actualizados);
-    const mod = actualizados.find(f => f.id === id);
-    if (mod) {
-      try {
-        await supabase.from("boveda_familiar").update({ bloqueado: mod.bloqueado }).eq("id", id);
-      } catch (e) {
-        console.error(e);
+    if (typeof window !== 'undefined') {
+      const guardado = localStorage.getItem(STORAGE_KEY);
+      if (guardado) {
+        try {
+          lista = JSON.parse(guardado);
+        } catch (e) {
+          console.error('Error leyendo localStorage:', e);
+        }
       }
     }
+
+    try {
+      const { data, error } = await supabase.from('boveda_familiar').select('*');
+      if (!error && data && data.length > 0) {
+        lista = data.map((item: any) => ({
+          id: item.id,
+          nombre: item.nombre,
+          cedula: String(item.cedula),
+          claveMaestra: item.claveMaestra || item.clave_maestra || '',
+          nivel: Number(item.nivel) || 1,
+          rol: item.rol || (Number(item.nivel) === 10 ? 'Creador / Superuser' : 'Superuser'),
+          bloqueado: Boolean(item.bloqueado)
+        }));
+      }
+    } catch (err) {
+      console.error('Error consultando Supabase:', err);
+    }
+
+    // Garantizar que el Creador siempre exista en Nivel 10 y nadie más tenga Nivel 10
+    const existeCreador = lista.some(
+      (p) => p.nivel === 10 || p.nombre.toLowerCase().includes('alexander segundo castellanos')
+    );
+
+    if (!existeCreador) {
+      lista = [perfilCreadorBase, ...lista];
+    } else {
+      lista = lista.map((p) => {
+        if (p.nombre.toLowerCase().includes('alexander segundo castellanos')) {
+          return { ...p, nivel: 10, rol: 'Creador / Superuser', bloqueado: false };
+        }
+        // Candado: ningún otro perfil puede tener nivel 10
+        if (p.nivel >= 10) {
+          return { ...p, nivel: 9, rol: 'Superuser' };
+        }
+        return { ...p, rol: 'Superuser' };
+      });
+    }
+
+    guardarLocal(lista);
+    setPerfiles(lista);
+    setCargando(false);
   };
 
-  const familiaresFiltrados = familiares.filter(
-    (f) => f.nombre.toLowerCase().includes(busquedaFam.toLowerCase()) || f.cedula.toLowerCase().includes(busquedaFam.toLowerCase())
-  );
+  const guardarLocal = (lista: PerfilFamiliar[]) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
+    }
+  };
+
+  const handleRegistrar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMensaje(null);
+
+    const nombreLimpio = nombre.trim();
+    const cedulaLimpia = cedula.trim();
+    const claveLimpia = claveMaestra.trim();
+
+    if (!nombreLimpio || !cedulaLimpia || !claveLimpia) {
+      setMensaje({ tipo: 'error', texto: 'Complete nombre completo, cédula de identidad y clave maestra.' });
+      return;
+    }
+
+    if (!/^\d+$/.test(cedulaLimpia)) {
+      setMensaje({ tipo: 'error', texto: 'La cédula de identidad debe contener solo números.' });
+      return;
+    }
+
+    // Candado estricto: nuevos registros familiares solo pueden ir del 1 al 9
+    const nivelSeguro = Math.min(Math.max(Number(nivel), 1), 9);
+    if (nivel >= 10) {
+      setMensaje({
+        tipo: 'error',
+        texto: 'BLOQUEO DE JERARQUÍA: El Nivel 10 es exclusivo del Creador. Se asignó Nivel 9 como máximo.'
+      });
+    }
+
+    const duplicado = perfiles.some((p) => p.cedula === cedulaLimpia);
+    if (duplicado) {
+      setMensaje({ tipo: 'error', texto: 'Ya existe un registro en la Bóveda Familiar con esa cédula.' });
+      return;
+    }
+
+    const nuevoPerfil: PerfilFamiliar = {
+      nombre: nombreLimpio,
+      cedula: cedulaLimpia,
+      claveMaestra: claveLimpia,
+      nivel: nivelSeguro,
+      rol: 'Superuser',
+      bloqueado: false
+    };
+
+    const nuevaLista = [...perfiles, nuevoPerfil];
+    setPerfiles(nuevaLista);
+    guardarLocal(nuevaLista);
+
+    try {
+      await supabase.from('boveda_familiar').insert([nuevoPerfil]);
+    } catch (err) {
+      console.error('Error guardando en Supabase:', err);
+    }
+
+    setNombre('');
+    setCedula('');
+    setClaveMaestra('');
+    setNivel(1);
+    setMensaje({
+      tipo: 'ok',
+      texto: `Perfil registrado como Superuser en Nivel ${nivelSeguro} (${DESCRIPCION_NIVELES[nivelSeguro].titulo}).`
+    });
+  };
+
+  const cambiarNivelHija = async (cedulaObjetivo: string, nuevoNivel: number) => {
+    const target = perfiles.find((p) => p.cedula === cedulaObjetivo);
+    if (!target) return;
+
+    if (target.nivel === 10 || target.nombre.toLowerCase().includes('alexander segundo castellanos')) {
+      setMensaje({
+        tipo: 'error',
+        texto: 'AUTORIDAD PROTEGIDA: El registro maestro del Creador (Nivel 10) no puede degradarse ni alterarse.'
+      });
+      return;
+    }
+
+    const nivelValidado = Math.min(Math.max(nuevoNivel, 1), 9);
+    const actualizada = perfiles.map((p) =>
+      p.cedula === cedulaObjetivo ? { ...p, nivel: nivelValidado, rol: 'Superuser' } : p
+    );
+
+    setPerfiles(actualizada);
+    guardarLocal(actualizada);
+
+    try {
+      await supabase
+        .from('boveda_familiar')
+        .update({ nivel: nivelValidado, rol: 'Superuser' })
+        .eq('cedula', cedulaObjetivo);
+    } catch (err) {
+      console.error('Error actualizando nivel en Supabase:', err);
+    }
+
+    setMensaje({
+      tipo: 'ok',
+      texto: `Progreso actualizado: ${target.nombre} ahora opera en ${DESCRIPCION_NIVELES[nivelValidado].titulo}.`
+    });
+  };
+
+  const toggleBloqueo = async (cedulaObjetivo: string) => {
+    const target = perfiles.find((p) => p.cedula === cedulaObjetivo);
+    if (!target) return;
+
+    if (target.nivel === 10 || target.nombre.toLowerCase().includes('alexander segundo castellanos')) {
+      setMensaje({ tipo: 'error', texto: 'El Creador (Nivel 10) no puede ser bloqueado.' });
+      return;
+    }
+
+    const nuevoEstado = !target.bloqueado;
+    const actualizada = perfiles.map((p) =>
+      p.cedula === cedulaObjetivo ? { ...p, bloqueado: nuevoEstado } : p
+    );
+
+    setPerfiles(actualizada);
+    guardarLocal(actualizada);
+
+    try {
+      await supabase
+        .from('boveda_familiar')
+        .update({ bloqueado: nuevoEstado })
+        .eq('cedula', cedulaObjetivo);
+    } catch (err) {
+      console.error('Error actualizando estado en Supabase:', err);
+    }
+
+    setMensaje({
+      tipo: 'info',
+      texto: `Acceso de ${target.nombre} ${nuevoEstado ? 'SUSPENDIDO' : 'HABILITADO'}.`
+    });
+  };
 
   return (
-    <div className="bg-slate-950 border border-amber-500/30 rounded-2xl p-6 shadow-2xl font-mono text-xs space-y-6">
-      <div className="bg-amber-950/20 border border-amber-500/40 p-4 rounded-xl flex justify-between items-center text-white">
+    <div className="w-full max-w-6xl mx-auto bg-[#070d1a] border border-slate-800 rounded-2xl p-6 shadow-2xl font-mono text-slate-100 space-y-6">
+      {/* Encabezado */}
+      <div className="border-b border-slate-800 pb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h3 className="text-sm font-bold text-amber-300 uppercase">🔒 Bóveda Privada & 5 Niveles (Control Operativo Total)</h3>
-          <p className="text-xs text-slate-300 mt-1">Gestión centralizada con persistencia híbrida a prueba de fallos de red.</p>
+          <span className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold">
+            AC01 // SEGURIDAD DE NÚCLEO FAMILIAR
+          </span>
+          <h2 className="text-lg font-bold text-white tracking-wide mt-0.5">
+            BÓVEDA PRIVADA — ESCALA PROGRESIVA (NIVELES 1 AL 10)
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Jerarquía exclusiva: Nivel 10 reservado al Creador (Acceso Total). Niveles 1 al 9 asignables paso a paso para Superusers familiares.
+          </p>
         </div>
-        <span className="px-2.5 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-lg text-[10px] font-bold">
-          MODO: {modoAccion.toUpperCase()} {idFamSeleccionado ? `(Seleccionado)` : ""}
-        </span>
-      </div>
-
-      {/* BARRA DE BÚSQUEDA Y BOTONERA DE ICONOS PUROS */}
-      <div className="bg-black/50 p-4 rounded-xl border border-slate-800 space-y-3">
-        <div className="flex items-center space-x-2">
-          <input
-            type="text"
-            placeholder="🔍 Ingrese nombre o número de cédula..."
-            value={busquedaFam}
-            onChange={(e) => setBusquedaFam(e.target.value)}
-            className="flex-1 bg-black border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-amber-500 outline-none"
-          />
-          <button
-            type="button"
-            onClick={seleccionarMiembroPorBusqueda}
-            title="Buscar usuario"
-            className="p-2.5 bg-slate-800 hover:bg-amber-500 hover:text-black text-slate-200 font-bold rounded-xl border border-slate-700 transition cursor-pointer flex items-center justify-center text-sm shadow-sm"
-          >
-            🔍
-          </button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80">
-          <span className="text-[10px] text-slate-400 uppercase font-bold mr-2">Herramientas:</span>
-
-          <button
-            type="button"
-            onClick={accionCrearNuevo}
-            title="Crear Nuevo Registro"
-            className="p-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-sm transition cursor-pointer flex items-center justify-center shadow-sm"
-          >
-            ➕
-          </button>
-
-          <button
-            type="button"
-            onClick={accionRegistrarNuevo}
-            title="Registrar Nuevo Usuario"
-            className="p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm transition cursor-pointer flex items-center justify-center shadow-sm"
-          >
-            📥
-          </button>
-
-          <button
-            type="button"
-            onClick={accionGuardarCambios}
-            title="Guardar Cambios del Usuario Seleccionado"
-            className="p-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl text-sm transition cursor-pointer flex items-center justify-center shadow-sm"
-          >
-            💾
-          </button>
-
-          <button
-            type="button"
-            onClick={accionVerSeleccionado}
-            title="Ver Registro Seleccionado"
-            className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-sm transition cursor-pointer flex items-center justify-center border border-slate-700 shadow-sm"
-          >
-            👁️
-          </button>
-
-          <button
-            type="button"
-            onClick={accionEditarSeleccionado}
-            title="Editar Registro Seleccionado"
-            className="p-2.5 bg-purple-600/30 hover:bg-purple-600 text-purple-300 hover:text-white font-bold rounded-xl text-sm transition cursor-pointer flex items-center justify-center border border-purple-500/40 shadow-sm"
-          >
-            ✏️
-          </button>
-
-          <button
-            type="button"
-            onClick={accionEliminarSeleccionado}
-            title="Eliminar Registro Seleccionado"
-            className="p-2.5 bg-red-600/30 hover:bg-red-600 text-red-300 hover:text-white font-bold rounded-xl text-sm transition cursor-pointer flex items-center justify-center border border-red-500/40 shadow-sm"
-          >
-            🗑️
-          </button>
+        <div className="bg-emerald-950/50 border border-emerald-500/40 rounded-xl px-4 py-2.5 text-right">
+          <div className="text-[10px] text-emerald-300 uppercase font-bold">Cúspide del Sistema</div>
+          <div className="text-xs font-bold text-white">NIVEL 10 — CREADOR</div>
         </div>
       </div>
 
-      {/* FORMULARIO DE ENTRADA CON EL OJITO DE VISIBILIDAD */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-black/40 p-4 rounded-xl border border-slate-800 text-white">
-        <div>
-          <label className="text-[10px] text-slate-400 block mb-1">Nombre Completo</label>
-          <input
-            type="text"
-            placeholder="Nombre"
-            value={nombreFamInput}
-            onChange={(e) => setNombreFamInput(e.target.value)}
-            disabled={modoAccion === "ver"}
-            className="w-full bg-black border border-slate-700 rounded-lg p-2 text-white disabled:opacity-50"
-          />
+      {/* Alertas */}
+      {mensaje && (
+        <div
+          className={`p-3 rounded-xl border text-xs font-semibold ${
+            mensaje.tipo === 'ok'
+              ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300'
+              : mensaje.tipo === 'error'
+              ? 'bg-red-950/60 border-red-500/50 text-red-300'
+              : 'bg-amber-950/60 border-amber-500/50 text-amber-300'
+          }`}
+        >
+          {mensaje.texto}
         </div>
-        <div>
-          <label className="text-[10px] text-slate-400 block mb-1">Cédula de Identidad</label>
-          <input
-            type="text"
-            placeholder="Cédula"
-            value={cedulaFamInput}
-            onChange={(e) => setCedulaFamInput(e.target.value)}
-            disabled={modoAccion === "ver"}
-            className="w-full bg-black border border-slate-700 rounded-lg p-2 text-white disabled:opacity-50"
-          />
+      )}
+
+      {/* Formulario de Registro */}
+      <form onSubmit={handleRegistrar} className="bg-black/40 border border-slate-800 rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
+            + Registrar Integrante de Bóveda Familiar (Cargo: Superuser)
+          </h3>
+          <span className="text-[11px] text-slate-400">Inicio recomendado: Nivel 1 (Solo Ver)</span>
         </div>
-        <div>
-          <label className="text-[10px] text-slate-400 block mb-1">Clave Maestra</label>
-          <div className="relative flex items-center">
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+          <div>
+            <label className="block text-slate-400 mb-1 uppercase">Nombre Completo:</label>
             <input
-              type={mostrarClave ? "text" : "password"}
-              placeholder="Clave Maestra"
-              value={claveMaestraFamInput}
-              onChange={(e) => setClaveMaestraFamInput(e.target.value)}
-              disabled={modoAccion === "ver"}
-              className="w-full bg-black border border-slate-700 rounded-lg p-2 pr-9 text-white disabled:opacity-50"
+              type="text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Ej: Aleanny Castellanos"
+              className="w-full bg-[#030712] border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-emerald-500"
+              required
             />
-            <button
-              type="button"
-              onClick={() => setMostrarClave(!mostrarClave)}
-              title={mostrarClave ? "Ocultar clave" : "Ver clave"}
-              className="absolute right-2.5 text-slate-400 hover:text-amber-400 text-sm transition cursor-pointer"
+          </div>
+
+          <div>
+            <label className="block text-slate-400 mb-1 uppercase">Cédula de Identidad:</label>
+            <input
+              type="text"
+              value={cedula}
+              onChange={(e) => setCedula(e.target.value)}
+              placeholder="Solo números"
+              className="w-full bg-[#030712] border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-emerald-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-400 mb-1 uppercase">Clave Maestra:</label>
+            <input
+              type="password"
+              value={claveMaestra}
+              onChange={(e) => setClaveMaestra(e.target.value)}
+              placeholder="••••••••••••"
+              className="w-full bg-[#030712] border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-emerald-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-400 mb-1 uppercase">Nivel Inicial (1 al 9):</label>
+            <select
+              value={nivel}
+              onChange={(e) => setNivel(Number(e.target.value))}
+              className="w-full bg-[#030712] border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-bold focus:outline-none focus:border-emerald-500"
             >
-              {mostrarClave ? "👁️‍🗨️" : "👁️"}
-            </button>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                <option key={n} value={n}>
+                  {DESCRIPCION_NIVELES[n].titulo}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
-        <div>
-          <label className="text-[10px] text-slate-400 block mb-1">Nivel de Autorización (1-5)</label>
-          <select
-            value={nivelFamInput}
-            onChange={(e) => setNivelFamInput(Number(e.target.value))}
-            disabled={modoAccion === "ver"}
-            className="w-full bg-black border border-slate-700 rounded-lg p-2 text-amber-400 font-bold disabled:opacity-50"
+
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-2 border-t border-slate-800/80">
+          <div className="text-[11px] text-slate-400">
+            <span className="text-emerald-400 font-bold">Alcance seleccionado: </span>
+            {DESCRIPCION_NIVELES[nivel]?.detalle}
+          </div>
+          <button
+            type="submit"
+            className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-lg transition-all cursor-pointer shrink-0"
           >
-            <option value={1}>Nivel 1</option>
-            <option value={2}>Nivel 2</option>
-            <option value={3}>Nivel 3</option>
-            <option value={4}>Nivel 4</option>
-            <option value={5}>Nivel 5</option>
-          </select>
+            Guardar en Bóveda
+          </button>
         </div>
+      </form>
+
+      {/* Tabla de Perfiles Registrados y Control Progresivo */}
+      <div className="bg-black/40 border border-slate-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-slate-800 flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+            Jerarquía Activa en Bóveda Familiar
+          </h3>
+          <span className="text-[11px] text-slate-400">{perfiles.length} perfiles registrados</span>
+        </div>
+
+        {cargando ? (
+          <div className="p-6 text-center text-xs text-slate-400">Sincronizando bóveda...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-950/70 text-[10px] uppercase text-slate-400">
+                  <th className="py-3 px-4">Integrante</th>
+                  <th className="py-3 px-4">Cédula</th>
+                  <th className="py-3 px-4">Cargo</th>
+                  <th className="py-3 px-4">Nivel y Función Actual</th>
+                  <th className="py-3 px-4">Escalar Nivel (1-9)</th>
+                  <th className="py-3 px-4 text-right">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/70">
+                {perfiles.map((p) => {
+                  const esCreador = p.nivel === 10;
+                  const infoNivel = DESCRIPCION_NIVELES[p.nivel] || DESCRIPCION_NIVELES[1];
+                  return (
+                    <tr
+                      key={p.cedula}
+                      className={esCreador ? 'bg-emerald-950/20' : 'hover:bg-slate-900/40'}
+                    >
+                      <td className="py-3 px-4 font-bold text-white">
+                        {p.nombre}
+                        {esCreador && (
+                          <span className="ml-2 px-2 py-0.5 text-[10px] rounded bg-emerald-500 text-black font-extrabold">
+                            CREADOR
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-slate-300">{p.cedula}</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            esCreador
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                          }`}
+                        >
+                          {esCreador ? 'Creador / Superuser' : 'Superuser'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-slate-100">{infoNivel.titulo}</div>
+                        <div className="text-[10px] text-slate-400">{infoNivel.detalle}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        {esCreador ? (
+                          <span className="text-[11px] font-bold text-emerald-400">
+                            🔒 Nivel 10 Fijo (Acceso Total)
+                          </span>
+                        ) : (
+                          <select
+                            value={p.nivel}
+                            onChange={(e) => cambiarNivelHija(p.cedula, Number(e.target.value))}
+                            className="bg-[#030712] border border-slate-700 rounded px-2.5 py-1.5 text-[11px] text-amber-300 font-bold focus:outline-none focus:border-emerald-500"
+                          >
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                              <option key={n} value={n}>
+                                Nivel {n} — {DESCRIPCION_NIVELES[n].titulo.split('—')[1]?.trim()}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        {esCreador ? (
+                          <span className="text-[10px] text-emerald-400 font-bold">PROTEGIDO</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => toggleBloqueo(p.cedula)}
+                            className={`px-3 py-1 rounded text-[10px] font-bold uppercase cursor-pointer ${
+                              p.bloqueado
+                                ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            }`}
+                          >
+                            {p.bloqueado ? 'Bloqueado' : 'Activo'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* CONTENEDOR TIPO TABLA LIMPIA */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="p-3 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
-          <span className="font-bold text-amber-400 text-xs uppercase">📋 Listado Activo del Sistema (Haga clic en una fila para seleccionar)</span>
-          <span className="text-[10px] text-slate-400">Total: {familiaresFiltrados.length} registros</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-black/60 text-slate-400 text-[10px] uppercase border-b border-slate-800 font-mono">
-                <th className="p-3">Cédula</th>
-                <th className="p-3">Nombre Completo</th>
-                <th className="p-3">Rol</th>
-                <th className="p-3">Nivel</th>
-                <th className="p-3 text-center">Estado (Micro-botón Activo / Bloqueado)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {familiaresFiltrados.map((fam) => {
-                const seleccionado = idFamSeleccionado === fam.id;
-                return (
-                  <tr
-                    key={fam.id}
-                    onClick={() => {
-                      setIdFamSeleccionado(fam.id);
-                      setNombreFamInput(fam.nombre);
-                      setCedulaFamInput(fam.cedula);
-                      setClaveMaestraFamInput(fam.claveMaestra);
-                      setNivelFamInput(fam.nivel);
-                      setModoAccion("editar");
-                    }}
-                    className={`cursor-pointer transition-colors ${seleccionado ? "bg-amber-500/10 border-l-4 border-amber-500" : "hover:bg-slate-800/40"}`}
-                  >
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded-lg border text-[10px] font-bold ${seleccionado ? "bg-amber-500 text-black border-amber-400" : "bg-black text-amber-400 border-slate-800"}`}>
-                        {fam.cedula} {seleccionado ? "✓" : ""}
-                      </span>
-                    </td>
-                    <td className="p-3 font-bold text-white">{fam.nombre}</td>
-                    <td className="p-3 text-cyan-300 text-[11px] font-bold">Super User</td>
-                    <td className="p-3 text-amber-400 text-[11px] font-bold">Nivel {fam.nivel}</td>
-                    <td className="p-3 text-center">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleBloqueoFamiliar(fam.id);
-                        }}
-                        title="Haga clic para alternar entre Activo y Bloqueado"
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold cursor-pointer transition shadow-sm ${
-                          fam.bloqueado
-                            ? "bg-red-950 text-red-400 border border-red-500/40 hover:bg-red-900"
-                            : "bg-emerald-950 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-900"
-                        }`}
-                      >
-                        {fam.bloqueado ? "🔒 BLOQUEADO" : "🟢 ACTIVO"}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {familiaresFiltrados.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-500">
-                    No se encontraron registros activos en la Bóveda.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {/* Guía Visual de los 10 Niveles */}
+      <div className="bg-black/40 border border-slate-800 rounded-xl p-5 space-y-3">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+          Mapa de Autorización Progresiva (Niveles 1 al 10)
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-[11px]">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
+            const item = DESCRIPCION_NIVELES[n];
+            const esDiez = n === 10;
+            return (
+              <div
+                key={n}
+                className={`p-3 rounded-lg border ${
+                  esDiez
+                    ? 'bg-emerald-950/30 border-emerald-500/50 text-emerald-200'
+                    : 'bg-[#030712] border-slate-800/90 text-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`font-bold ${esDiez ? 'text-emerald-400' : 'text-amber-300'}`}>
+                    {item.titulo}
+                  </span>
+                  <span className="text-[9px] uppercase px-2 py-0.5 rounded bg-slate-900 text-slate-400">
+                    {item.etapa}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">{item.detalle}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
