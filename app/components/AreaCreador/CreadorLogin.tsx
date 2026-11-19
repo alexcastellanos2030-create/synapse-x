@@ -4,7 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface CreadorLoginProps {
-  onLoginSuccess: (rol: string, cedula: string, clave1: string, clave2: string, modoSoloVer: boolean) => void;
+  onLoginSuccess: (
+    rol: string,
+    cedula: string,
+    clave1: string,
+    clave2: string,
+    modoSoloVer: boolean
+  ) => void;
 }
 
 interface PerfilAutorizado {
@@ -12,14 +18,87 @@ interface PerfilAutorizado {
   nombre: string;
   cedula: string;
   claveMaestra: string;
+  clavesPermitidas?: string[];
   nivel: number;
   rol: string;
   bloqueado: boolean;
 }
 
 const STORAGE_KEY = 'synapse_boveda_familiar_local_v2';
+const SESSION_KEY = 'synapse_sesion_activa_v1';
 const LOCK_KEY = 'synapse_temporal_lock_until';
 const BOT_LOCK_KEY = 'synapse_intrusion_lock';
+
+const PERFILES_MAESTROS_BASE: PerfilAutorizado[] = [
+  {
+    nombre: 'Alexander Segundo Castellanos Perozo',
+    cedula: '10433935',
+    claveMaestra: '*Paola123!',
+    clavesPermitidas: ['*Paola123!', '*Ac12345!', 'Iar661972', 'Albany123'],
+    nivel: 10,
+    rol: 'Creador / Superuser',
+    bloqueado: false
+  },
+  {
+    nombre: 'Aleanny Castellanos',
+    cedula: '279276795',
+    claveMaestra: '*Aleanny123',
+    clavesPermitidas: ['*Aleanny123'],
+    nivel: 1,
+    rol: 'Superuser',
+    bloqueado: false
+  },
+  {
+    nombre: 'Albany Castellanos',
+    cedula: '33323644',
+    claveMaestra: '*Albany123',
+    clavesPermitidas: ['*Albany123'],
+    nivel: 1,
+    rol: 'Superuser',
+    bloqueado: false
+  }
+];
+
+function combinarPerfilesConBase(entrantes: PerfilAutorizado[]): PerfilAutorizado[] {
+  const mapa = new Map<string, PerfilAutorizado>();
+
+  for (const base of PERFILES_MAESTROS_BASE) {
+    mapa.set(base.cedula.trim(), { ...base });
+  }
+
+  for (const item of entrantes) {
+    const ced = String(item.cedula || '').trim();
+    if (!ced) continue;
+
+    const base = mapa.get(ced);
+    const claveDb = String(item.claveMaestra || '').trim();
+    const listaClaves = new Set<string>(base?.clavesPermitidas || []);
+
+    if (base?.claveMaestra) listaClaves.add(base.claveMaestra.trim());
+    if (claveDb) listaClaves.add(claveDb);
+    if (Array.isArray(item.clavesPermitidas)) {
+      item.clavesPermitidas.forEach((c) => {
+        if (String(c || '').trim()) listaClaves.add(String(c).trim());
+      });
+    }
+
+    const esCreador = ced === '10433935' || Number(item.nivel) === 10;
+    const nivelFinal = esCreador ? 10 : Math.min(Math.max(Number(item.nivel) || 1, 1), 9);
+
+    mapa.set(ced, {
+      id: item.id ?? base?.id,
+      nombre: String(item.nombre || base?.nombre || '').trim(),
+      cedula: ced,
+      claveMaestra: claveDb || base?.claveMaestra || '',
+      clavesPermitidas: Array.from(listaClaves),
+      nivel: nivelFinal,
+      rol: esCreador ? 'Creador / Superuser' : String(item.rol || 'Superuser').trim(),
+      bloqueado: esCreador ? false : Boolean(item.bloqueado)
+    });
+  }
+
+  return Array.from(mapa.values());
+}
 
 export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
   const [cedula, setCedula] = useState<string>('');
@@ -37,25 +116,29 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
   const [isStep1Valid, setIsStep1Valid] = useState<boolean>(false);
   const [isStep3Valid, setIsStep3Valid] = useState<boolean>(false);
 
-  const [usuariosAutorizados, setUsuariosAutorizados] = useState<PerfilAutorizado[]>([]);
+  const [usuariosAutorizados, setUsuariosAutorizados] = useState<PerfilAutorizado[]>(
+    PERFILES_MAESTROS_BASE
+  );
 
   // Control inteligente: errores humanos (hasta 10) vs ráfagas automatizadas
   const [intentosFallidos, setIntentosFallidos] = useState<number>(0);
   const [segundosRestantes, setSegundosRestantes] = useState<number>(0);
   const [bloqueoIntrusion, setBloqueoIntrusion] = useState<boolean>(false);
 
-  // Registro de tiempos para detectar velocidad no humana (bots / fuerza bruta)
   const historialTiemposRef = useRef<number[]>([]);
 
   useEffect(() => {
     async function cargarPerfilesBoveda() {
-      let perfiles: PerfilAutorizado[] = [];
+      let perfiles: PerfilAutorizado[] = [...PERFILES_MAESTROS_BASE];
 
       if (typeof window !== 'undefined') {
         const local = localStorage.getItem(STORAGE_KEY);
         if (local) {
           try {
-            perfiles = JSON.parse(local);
+            const parsed = JSON.parse(local);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              perfiles = combinarPerfilesConBase(parsed);
+            }
           } catch (e) {
             console.error(e);
           }
@@ -80,15 +163,18 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
       try {
         const { data, error } = await supabase.from('boveda_familiar').select('*');
         if (!error && data && data.length > 0) {
-          perfiles = data.map((item: any) => ({
+          const mapeados: PerfilAutorizado[] = data.map((item: any) => ({
             id: item.id,
-            nombre: item.nombre,
-            cedula: String(item.cedula).trim(),
+            nombre: String(item.nombre || '').trim(),
+            cedula: String(item.cedula || '').trim(),
             claveMaestra: String(item.claveMaestra || item.clave_maestra || '').trim(),
             nivel: Number(item.nivel) || 1,
-            rol: item.rol || (Number(item.nivel) === 10 ? 'Creador / Superuser' : 'Superuser'),
+            rol:
+              String(item.rol || '').trim() ||
+              (Number(item.nivel) === 10 ? 'Creador / Superuser' : 'Superuser'),
             bloqueado: Boolean(item.bloqueado)
           }));
+          perfiles = combinarPerfilesConBase(mapeados);
           if (typeof window !== 'undefined') {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(perfiles));
           }
@@ -97,29 +183,9 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
         console.error('Error sincronizando perfiles de bóveda:', err);
       }
 
-      if (perfiles.length === 0) {
-        perfiles = [
-          {
-            nombre: 'Alexander Segundo Castellanos Perozo (Creador)',
-            cedula: '12345678',
-            claveMaestra: 'synapse2026',
-            nivel: 10,
-            rol: 'Creador / Superuser',
-            bloqueado: false
-          },
-          {
-            nombre: 'Aleanny Castellanos (Superuser)',
-            cedula: '279276795',
-            claveMaestra: '*Aleanny123',
-            nivel: 1,
-            rol: 'Superuser',
-            bloqueado: false
-          }
-        ];
-      }
-
       setUsuariosAutorizados(perfiles);
     }
+
     cargarPerfilesBoveda();
   }, []);
 
@@ -145,13 +211,36 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
     return () => clearInterval(timer);
   }, [segundosRestantes]);
 
+  const esClaveValidaParaUsuario = (
+    usuario: PerfilAutorizado | undefined,
+    claveIngresada: string
+  ): boolean => {
+    if (!usuario) return false;
+    const limpia = claveIngresada.trim();
+    if (!limpia) return false;
+
+    const candidatas = new Set<string>();
+    if (usuario.claveMaestra) candidatas.add(usuario.claveMaestra.trim());
+    if (Array.isArray(usuario.clavesPermitidas)) {
+      usuario.clavesPermitidas.forEach((c) => {
+        if (String(c || '').trim()) candidatas.add(String(c).trim());
+      });
+    }
+
+    const base = PERFILES_MAESTROS_BASE.find((p) => p.cedula === usuario.cedula.trim());
+    if (base?.clavesPermitidas) {
+      base.clavesPermitidas.forEach((c) => candidatas.add(c.trim()));
+    }
+
+    return candidatas.has(limpia);
+  };
+
   const registrarEventoValidacion = (): boolean => {
     const ahora = Date.now();
     const ventanaReciente = historialTiemposRef.current.filter((t) => ahora - t < 2000);
     ventanaReciente.push(ahora);
     historialTiemposRef.current = ventanaReciente;
 
-    // Si hay más de 6 validaciones completas en menos de 2 segundos = ráfaga automatizada / bot
     if (ventanaReciente.length > 6) {
       setBloqueoIntrusion(true);
       if (typeof window !== 'undefined') {
@@ -189,9 +278,13 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
   const handleCedulaChange = (rawVal: string) => {
     if (bloqueoIntrusion || segundosRestantes > 0) return;
 
-    // Limpiar espacios accidentales al inicio o final (común en móviles/tablets)
     const val = rawVal.replace(/\s+/g, '');
     setCedula(val);
+    setKey1('');
+    setKey2('');
+    setLed3('white');
+    setLed4('white');
+    setIsStep3Valid(false);
 
     if (/[^0-9]/.test(val)) {
       setLed1('red');
@@ -234,7 +327,7 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
         `Paso 1 & 2 OK: Bienvenido(a) ${encontrado.nombre} (Nivel ${encontrado.nivel}). Proceda al Paso 3.`
       );
     } else {
-      if (val.length >= 8) {
+      if (val.length >= 9) {
         setLed1('red');
         setIsStep1Valid(false);
         setName('');
@@ -259,6 +352,8 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
 
     if (val.length === 0) {
       setLed3('white');
+      setLed4('white');
+      setKey2('');
       setAlertMsg('Paso 3: Ingrese su clave maestra.');
       setIsStep3Valid(false);
       return;
@@ -266,14 +361,8 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
 
     setLed3('yellow');
     const usuarioActual = usuariosAutorizados.find((u) => u.cedula.trim() === cedula.trim());
-    const clavesCreador = ['synapse2026', 'root9999', 'admin2026'];
-    const esCreador = usuarioActual?.nivel === 10;
 
-    const claveValida =
-      (usuarioActual && usuarioActual.claveMaestra === val.trim()) ||
-      (esCreador && clavesCreador.includes(val.trim()));
-
-    if (claveValida) {
+    if (esClaveValidaParaUsuario(usuarioActual, val)) {
       setLed3('green');
       setIsStep3Valid(true);
       setAlertMsg('Paso 3 OK. Proceda al Paso 4.');
@@ -300,14 +389,8 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
 
     setLed4('yellow');
     const usuarioActual = usuariosAutorizados.find((u) => u.cedula.trim() === cedula.trim());
-    const clavesCreador = ['synapse2026', 'root9999', 'admin2026'];
-    const esCreador = usuarioActual?.nivel === 10;
 
-    const claveValida =
-      (usuarioActual && usuarioActual.claveMaestra === val.trim()) ||
-      (esCreador && clavesCreador.includes(val.trim()));
-
-    if (claveValida) {
+    if (esClaveValidaParaUsuario(usuarioActual, val)) {
       setLed4('green');
       setAlertMsg('¡SECUENCIA COMPLETADA! Botón Entrar liberado.');
     } else {
@@ -316,7 +399,8 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
     }
   };
 
-  const isFullyAuthorized = led1 === 'green' && led2 === 'green' && led3 === 'green' && led4 === 'green';
+  const isFullyAuthorized =
+    led1 === 'green' && led2 === 'green' && led3 === 'green' && led4 === 'green';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -328,18 +412,30 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
       setIntentosFallidos(0);
       const usuarioActual = usuariosAutorizados.find((u) => u.cedula.trim() === cedula.trim());
       const nivelUsuario = usuarioActual ? Number(usuarioActual.nivel) : 1;
-      const esCreador = nivelUsuario === 10 || usuarioActual?.rol?.includes('Creador');
+      const esCreador =
+        cedula.trim() === '10433935' ||
+        nivelUsuario === 10 ||
+        Boolean(usuarioActual?.rol?.toLowerCase().includes('creador'));
 
-      // Nivel 1 es exclusivamente "Solo Ver"; niveles 2 al 10 habilitan acciones según su escala
       const modoSoloVer = !esCreador && nivelUsuario === 1;
+      const rolFinal = esCreador ? 'Creador' : 'Superuser';
 
-      onLoginSuccess(
-        esCreador ? 'Creador' : 'Superuser',
-        cedula.trim(),
-        key1,
-        key2,
-        modoSoloVer
-      );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          SESSION_KEY,
+          JSON.stringify({
+            activa: true,
+            nombre: usuarioActual?.nombre || name,
+            cedula: cedula.trim(),
+            rol: rolFinal,
+            nivel: esCreador ? 10 : nivelUsuario,
+            modoSoloVer,
+            timestamp: Date.now()
+          })
+        );
+      }
+
+      onLoginSuccess(rolFinal, cedula.trim(), key1, key2, modoSoloVer);
     } else {
       registrarErrorHumano('Error de validación: Revise sus claves e intente nuevamente.');
     }
@@ -368,22 +464,40 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
     <div className="w-full max-w-lg bg-[#070d1a] border border-slate-800 rounded-2xl p-5 shadow-2xl relative font-mono text-slate-100">
       {/* Barra LED Superior */}
       <div className="mb-4 pb-3 border-b border-slate-800 flex items-center justify-between bg-black/60 px-4 py-2.5 rounded-xl">
-        <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest">ESTADO LED:</span>
+        <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest">
+          ESTADO LED:
+        </span>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-1.5" title="1. Cédula">
-            <span className={`w-3.5 h-3.5 rounded-full border transition-all duration-300 ${getLedColorClass(led1)}`} />
+            <span
+              className={`w-3.5 h-3.5 rounded-full border transition-all duration-300 ${getLedColorClass(
+                led1
+              )}`}
+            />
             <span className="text-[10px] text-slate-300 font-bold">1</span>
           </div>
           <div className="flex items-center space-x-1.5" title="2. Identidad">
-            <span className={`w-3.5 h-3.5 rounded-full border transition-all duration-300 ${getLedColorClass(led2)}`} />
+            <span
+              className={`w-3.5 h-3.5 rounded-full border transition-all duration-300 ${getLedColorClass(
+                led2
+              )}`}
+            />
             <span className="text-[10px] text-slate-300 font-bold">2</span>
           </div>
           <div className="flex items-center space-x-1.5" title="3. Clave 1">
-            <span className={`w-3.5 h-3.5 rounded-full border transition-all duration-300 ${getLedColorClass(led3)}`} />
+            <span
+              className={`w-3.5 h-3.5 rounded-full border transition-all duration-300 ${getLedColorClass(
+                led3
+              )}`}
+            />
             <span className="text-[10px] text-slate-300 font-bold">3</span>
           </div>
           <div className="flex items-center space-x-1.5" title="4. Clave 2">
-            <span className={`w-3.5 h-3.5 rounded-full border transition-all duration-300 ${getLedColorClass(led4)}`} />
+            <span
+              className={`w-3.5 h-3.5 rounded-full border transition-all duration-300 ${getLedColorClass(
+                led4
+              )}`}
+            />
             <span className="text-[10px] text-slate-300 font-bold">4</span>
           </div>
         </div>
@@ -400,16 +514,22 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
 
       {bloqueoIntrusion ? (
         <div className="p-5 bg-red-950/70 border border-red-500 rounded-xl text-center space-y-2">
-          <div className="text-sm font-bold text-red-400 uppercase">🚨 BLOQUEO POR ACTIVIDAD ANÓMALA</div>
+          <div className="text-sm font-bold text-red-400 uppercase">
+            🚨 BLOQUEO POR ACTIVIDAD ANÓMALA
+          </div>
           <p className="text-xs text-red-200">
-            Se detectaron intentos automatizados de alta velocidad. Protocolo de seguridad activado y notificación registrada para el Creador.
+            Se detectaron intentos automatizados de alta velocidad. Protocolo de seguridad activado y
+            notificación registrada para el Creador.
           </p>
         </div>
       ) : segundosRestantes > 0 ? (
         <div className="p-5 bg-amber-950/60 border border-amber-500/60 rounded-xl text-center space-y-2">
-          <div className="text-sm font-bold text-amber-300 uppercase">⏳ PAUSA PREVENTIVA DE 5 MINUTOS</div>
+          <div className="text-sm font-bold text-amber-300 uppercase">
+            ⏳ PAUSA PREVENTIVA DE 5 MINUTOS
+          </div>
           <p className="text-xs text-amber-100">
-            Se detectaron 10 errores de digitación. Espere a que finalice el contador para volver a ingresar sus datos con calma:
+            Se detectaron 10 errores de digitación. Espere a que finalice el contador para volver a
+            ingresar sus datos con calma:
           </p>
           <div className="text-2xl font-extrabold text-white tracking-widest pt-1">
             {formatTiempo(segundosRestantes)}
@@ -418,7 +538,9 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
           <div>
-            <label className="block text-slate-400 mb-1 uppercase tracking-wider">1. Nro. de Cédula:</label>
+            <label className="block text-slate-400 mb-1 uppercase tracking-wider">
+              1. Nro. de Cédula:
+            </label>
             <input
               type="text"
               inputMode="numeric"
@@ -431,7 +553,9 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
           </div>
 
           <div>
-            <label className="block text-slate-400 mb-1 uppercase tracking-wider">2. Identidad Verificada:</label>
+            <label className="block text-slate-400 mb-1 uppercase tracking-wider">
+              2. Identidad Verificada:
+            </label>
             <input
               type="text"
               value={name}
@@ -442,7 +566,9 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
           </div>
 
           <div>
-            <label className="block text-slate-400 mb-1 uppercase tracking-wider">3. Clave Maestra:</label>
+            <label className="block text-slate-400 mb-1 uppercase tracking-wider">
+              3. Clave Maestra:
+            </label>
             <input
               type="password"
               value={key1}
@@ -455,7 +581,9 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
           </div>
 
           <div>
-            <label className="block text-slate-400 mb-1 uppercase tracking-wider">4. Confirmar Clave Maestra:</label>
+            <label className="block text-slate-400 mb-1 uppercase tracking-wider">
+              4. Confirmar Clave Maestra:
+            </label>
             <input
               type="password"
               value={key2}
@@ -477,7 +605,9 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
               }`}
             >
-              {isFullyAuthorized ? '🔓 Candado Abierto - Entrar' : '🔒 Ingrese Secuencia Completa'}
+              {isFullyAuthorized
+                ? '🔓 Candado Abierto - Entrar'
+                : '🔒 Ingrese Secuencia Completa'}
             </button>
           </div>
         </form>
