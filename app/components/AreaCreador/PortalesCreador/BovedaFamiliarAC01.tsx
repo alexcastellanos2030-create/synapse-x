@@ -1,7 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+
+// ============================================================================
+// TIPOS Y CONSTANTES
+// ============================================================================
 
 interface PerfilFamiliar {
   id?: string;
@@ -21,12 +25,36 @@ interface EntradaBitacora {
   detalle: string;
 }
 
+interface InfoNivel {
+  titulo: string;
+  detalle: string;
+  etapa: string;
+  modo: string;
+  puedeRegistrar: boolean;
+}
+
 type PestanaPrincipal = 'registro' | 'progreso' | 'bitacora' | 'guia';
 
-const DESCRIPCION_NIVELES: Record<
-  number,
-  { titulo: string; detalle: string; etapa: string; modo: string; puedeRegistrar: boolean }
-> = {
+const STORAGE_KEY = 'synapse_boveda_familiar_local_v2';
+const BITACORA_KEY = 'synapse_boveda_familiar_bitacora_v1';
+const TAB_KEY = 'synapse_boveda_familiar_pestana_v1';
+const SESSION_KEY = 'synapse_sesion_activa_v1';
+
+const CREADOR_NOMBRE = 'Alexander Segundo Castellanos Perozo';
+const CREADOR_CEDULA = '12345678';
+
+const PERFIL_CREADOR_BASE: PerfilFamiliar = {
+  nombre: CREADOR_NOMBRE,
+  cedula: CREADOR_CEDULA,
+  claveMaestra: 'synapse2026',
+  nivel: 10,
+  rol: 'Creador / Superuser',
+  bloqueado: false,
+  notaAprendizaje:
+    'Autoridad máxima del sistema operativo. Supervisión general y formación familiar.'
+};
+
+const DESCRIPCION_NIVELES: Record<number, InfoNivel> = {
   1: {
     titulo: 'Nivel 1 — Solo Ver (Inicio / Observación)',
     detalle: 'Lectura de todas las áreas sin modificar ni registrar datos.',
@@ -99,41 +127,56 @@ const DESCRIPCION_NIVELES: Record<
   }
 };
 
-const STORAGE_KEY = 'synapse_boveda_familiar_local_v2';
-const BITACORA_KEY = 'synapse_boveda_familiar_bitacora_v1';
-const TAB_KEY = 'synapse_boveda_familiar_pestana_v1';
-const SESSION_KEY = 'synapse_sesion_activa_v1';
-
-const CREADOR_NOMBRE = 'Alexander Segundo Castellanos Perozo';
-const CREADOR_CEDULA = '12345678';
+// ============================================================================
+// COMPONENTE PRINCIPAL
+// ============================================================================
 
 export default function BovedaFamiliarAC01() {
+  // Pestaña y selección de bitácora
   const [pestanaActiva, setPestanaActiva] = useState<PestanaPrincipal>('registro');
   const [perfiles, setPerfiles] = useState<PerfilFamiliar[]>([]);
   const [bitacoras, setBitacoras] = useState<Record<string, EntradaBitacora[]>>({});
   const [cedulaBitacoraActiva, setCedulaBitacoraActiva] = useState<string>(CREADOR_CEDULA);
 
+  // Formulario de registro familiar
   const [nombre, setNombre] = useState<string>('');
   const [cedula, setCedula] = useState<string>('');
   const [claveMaestra, setClaveMaestra] = useState<string>('');
   const [nivel, setNivel] = useState<number>(1);
   const [notaAprendizaje, setNotaAprendizaje] = useState<string>('');
 
+  // Formulario de entrada manual en bitácora
   const [accionManual, setAccionManual] = useState<string>('PRÁCTICA / SUPERVISIÓN REGISTRADA');
   const [detalleManual, setDetalleManual] = useState<string>('');
 
+  // Estado de interfaz y sincronización
   const [mensaje, setMensaje] = useState<{ tipo: 'ok' | 'error' | 'info'; texto: string } | null>(null);
   const [cargando, setCargando] = useState<boolean>(true);
   const [sincronizando, setSincronizando] = useState<boolean>(false);
 
-  const perfilCreadorBase: PerfilFamiliar = {
-    nombre: CREADOR_NOMBRE,
-    cedula: CREADOR_CEDULA,
-    claveMaestra: 'synapse2026',
-    nivel: 10,
-    rol: 'Creador / Superuser',
-    bloqueado: false,
-    notaAprendizaje: 'Autoridad máxima del sistema operativo. Supervisión general y formación familiar.'
+  // --------------------------------------------------------------------------
+  // HELPERS DE PERSISTENCIA Y BITÁCORA
+  // --------------------------------------------------------------------------
+
+  const guardarLocal = (lista: PerfilFamiliar[]) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
+    }
+  };
+
+  const guardarBitacoraLocal = (data: Record<string, EntradaBitacora[]>) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(BITACORA_KEY, JSON.stringify(data));
+    }
+  };
+
+  const marcarSesionActiva = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        SESSION_KEY,
+        JSON.stringify({ activa: true, modulo: 'BovedaFamiliarAC01', timestamp: Date.now() })
+      );
+    }
   };
 
   const seleccionarPestana = (tab: PestanaPrincipal) => {
@@ -143,64 +186,48 @@ export default function BovedaFamiliarAC01() {
     }
   };
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const tabGuardada = localStorage.getItem(TAB_KEY) as PestanaPrincipal | null;
-      if (tabGuardada && ['registro', 'progreso', 'bitacora', 'guia'].includes(tabGuardada)) {
-        setPestanaActiva(tabGuardada);
-      }
-      localStorage.setItem(
-        SESSION_KEY,
-        JSON.stringify({ activa: true, modulo: 'BovedaFamiliarAC01', timestamp: Date.now() })
-      );
-    }
-    cargarTodo(false);
-  }, []);
-
   const agregarEntradaBitacora = (
     cedulaObjetivo: string,
     accion: string,
     detalle: string,
-    bitacoraActual?: Record<string, EntradaBitacora[]>
+    bitacoraBase?: Record<string, EntradaBitacora[]>
   ) => {
-    const base = bitacoraActual || bitacoras;
+    const origen = bitacoraBase || bitacoras;
     const nuevaEntrada: EntradaBitacora = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       fechaHora: new Date().toLocaleString('es-CL'),
       accion,
       detalle
     };
-    const listaPrev = base[cedulaObjetivo] || [];
+
     const actualizada: Record<string, EntradaBitacora[]> = {
-      ...base,
-      [cedulaObjetivo]: [nuevaEntrada, ...listaPrev]
+      ...origen,
+      [cedulaObjetivo]: [nuevaEntrada, ...(origen[cedulaObjetivo] || [])]
     };
+
     setBitacoras(actualizada);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(BITACORA_KEY, JSON.stringify(actualizada));
-    }
+    guardarBitacoraLocal(actualizada);
   };
 
-  const cargarTodo = async (esActualizacionManual = false) => {
-    if (perfiles.length === 0) {
-      setCargando(true);
-    }
+  // --------------------------------------------------------------------------
+  // CARGA Y SINCRONIZACIÓN
+  // --------------------------------------------------------------------------
+
+  const cargarTodo = useCallback(async (esActualizacionManual = false) => {
+    setCargando((prev) => (perfiles.length === 0 ? true : prev));
     setSincronizando(true);
+    marcarSesionActiva();
+
     let lista: PerfilFamiliar[] = [];
     let bitacoraCargada: Record<string, EntradaBitacora[]> = {};
 
     if (typeof window !== 'undefined') {
-      localStorage.setItem(
-        SESSION_KEY,
-        JSON.stringify({ activa: true, modulo: 'BovedaFamiliarAC01', timestamp: Date.now() })
-      );
-
       const guardado = localStorage.getItem(STORAGE_KEY);
       if (guardado) {
         try {
           lista = JSON.parse(guardado);
         } catch (e) {
-          console.error('Error leyendo localStorage:', e);
+          console.error('Error leyendo perfiles en localStorage:', e);
         }
       }
 
@@ -209,7 +236,7 @@ export default function BovedaFamiliarAC01() {
         try {
           bitacoraCargada = JSON.parse(bitGuardada);
         } catch (e) {
-          console.error('Error leyendo bitácora:', e);
+          console.error('Error leyendo bitácora en localStorage:', e);
         }
       }
     }
@@ -237,7 +264,7 @@ export default function BovedaFamiliarAC01() {
     );
 
     if (!existeCreador) {
-      lista = [perfilCreadorBase, ...lista];
+      lista = [PERFIL_CREADOR_BASE, ...lista];
     } else {
       lista = lista.map((p) => {
         if (p.nombre.toLowerCase().includes('alexander segundo castellanos')) {
@@ -249,14 +276,15 @@ export default function BovedaFamiliarAC01() {
             bloqueado: false
           };
         }
-        if (p.nivel >= 10) {
-          return { ...p, nivel: 9, rol: 'Superuser' };
-        }
-        return { ...p, rol: 'Superuser' };
+        return {
+          ...p,
+          nivel: p.nivel >= 10 ? 9 : p.nivel,
+          rol: 'Superuser'
+        };
       });
     }
 
-    const creadorReal = lista.find((p) => p.nivel === 10) || perfilCreadorBase;
+    const creadorReal = lista.find((p) => p.nivel === 10) || PERFIL_CREADOR_BASE;
     setCedulaBitacoraActiva((prev) => prev || creadorReal.cedula);
 
     if (!bitacoraCargada[creadorReal.cedula] || bitacoraCargada[creadorReal.cedula].length === 0) {
@@ -271,9 +299,7 @@ export default function BovedaFamiliarAC01() {
     }
 
     guardarLocal(lista);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(BITACORA_KEY, JSON.stringify(bitacoraCargada));
-    }
+    guardarBitacoraLocal(bitacoraCargada);
 
     setPerfiles(lista);
     setBitacoras(bitacoraCargada);
@@ -286,13 +312,21 @@ export default function BovedaFamiliarAC01() {
         texto: 'Datos actualizados. Permaneces en tu pantalla activa sin cierre de sesión.'
       });
     }
-  };
+  }, [perfiles.length]);
 
-  const guardarLocal = (lista: PerfilFamiliar[]) => {
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
+      const tabGuardada = localStorage.getItem(TAB_KEY) as PestanaPrincipal | null;
+      if (tabGuardada && ['registro', 'progreso', 'bitacora', 'guia'].includes(tabGuardada)) {
+        setPestanaActiva(tabGuardada);
+      }
     }
-  };
+    cargarTodo(false);
+  }, [cargarTodo]);
+
+  // --------------------------------------------------------------------------
+  // ACCIONES DE JERARQUÍA, NIVELES Y BITÁCORA
+  // --------------------------------------------------------------------------
 
   const handleRegistrar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -329,8 +363,7 @@ export default function BovedaFamiliarAC01() {
       });
     }
 
-    const duplicado = perfiles.some((p) => p.cedula === cedulaLimpia);
-    if (duplicado) {
+    if (perfiles.some((p) => p.cedula === cedulaLimpia)) {
       setMensaje({
         tipo: 'error',
         texto: 'Ya existe un registro en la Bóveda Familiar con esa cédula.'
@@ -358,7 +391,7 @@ export default function BovedaFamiliarAC01() {
       console.error('Error guardando en Supabase:', err);
     }
 
-    const creadorActual = perfiles.find((p) => p.nivel === 10) || perfilCreadorBase;
+    const creadorActual = perfiles.find((p) => p.nivel === 10) || PERFIL_CREADOR_BASE;
     const bitTemp: Record<string, EntradaBitacora[]> = {
       ...bitacoras,
       [cedulaLimpia]: [
@@ -423,7 +456,7 @@ export default function BovedaFamiliarAC01() {
       console.error('Error actualizando nivel en Supabase:', err);
     }
 
-    const creadorActual = perfiles.find((p) => p.nivel === 10) || perfilCreadorBase;
+    const creadorActual = perfiles.find((p) => p.nivel === 10) || PERFIL_CREADOR_BASE;
     agregarEntradaBitacora(
       cedulaObjetivo,
       nivelValidado > nivelAnterior ? 'ASCENSO DE NIVEL AUTORIZADO' : 'AJUSTE DE NIVEL SUPERVISADO',
@@ -467,6 +500,7 @@ export default function BovedaFamiliarAC01() {
     e.preventDefault();
     const detalleLimpio = detalleManual.trim();
     const accionLimpia = accionManual.trim() || 'REGISTRO DE ACTIVIDAD';
+
     if (!detalleLimpio) {
       setMensaje({
         tipo: 'error',
@@ -533,13 +567,29 @@ export default function BovedaFamiliarAC01() {
     seleccionarPestana('bitacora');
   };
 
-  const perfilCreador = perfiles.find((p) => p.nivel === 10) || perfilCreadorBase;
+  // --------------------------------------------------------------------------
+  // DATOS DERIVADOS PARA RENDER
+  // --------------------------------------------------------------------------
+
+  const perfilCreador = perfiles.find((p) => p.nivel === 10) || PERFIL_CREADOR_BASE;
   const perfilBitacoraSeleccionado =
     perfiles.find((p) => p.cedula === cedulaBitacoraActiva) || perfilCreador;
   const entradasSeleccionadas = bitacoras[perfilBitacoraSeleccionado.cedula] || [];
 
+  const pestanas: { id: PestanaPrincipal; etiqueta: string }[] = [
+    { id: 'registro', etiqueta: '1. Registro y Jerarquía' },
+    { id: 'progreso', etiqueta: '2. Progreso y Supervisión' },
+    { id: 'bitacora', etiqueta: '3. Bitácora Personalizada' },
+    { id: 'guia', etiqueta: '4. Guía de Niveles (1–10)' }
+  ];
+
+  // --------------------------------------------------------------------------
+  // RENDER
+  // --------------------------------------------------------------------------
+
   return (
     <div className="w-full max-w-6xl mx-auto bg-[#070d1a] border border-slate-800 rounded-2xl p-6 shadow-2xl font-mono text-slate-100 space-y-6">
+      {/* Encabezado */}
       <div className="border-b border-slate-800 pb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <span className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold">
@@ -549,9 +599,8 @@ export default function BovedaFamiliarAC01() {
             BÓVEDA PRIVADA — ESCALA PROGRESIVA (NIVELES 1 AL 10)
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Creador:{' '}
-            <span className="text-emerald-300 font-bold">{perfilCreador.nombre}</span> • Nivel 10
-            exclusivo (Acceso Total) • Superusers familiares del 1 al 9.
+            Creador: <span className="text-emerald-300 font-bold">{perfilCreador.nombre}</span> •
+            Nivel 10 exclusivo (Acceso Total) • Superusers familiares del 1 al 9.
           </p>
         </div>
 
@@ -564,62 +613,33 @@ export default function BovedaFamiliarAC01() {
             {sincronizando ? 'Actualizando...' : '↻ Actualizar'}
           </button>
           <div className="bg-emerald-950/50 border border-emerald-500/40 rounded-xl px-4 py-2 text-right">
-            <div className="text-[10px] text-emerald-300 uppercase font-bold">Cúspide del Sistema</div>
+            <div className="text-[10px] text-emerald-300 uppercase font-bold">
+              Cúspide del Sistema
+            </div>
             <div className="text-xs font-bold text-white">NIVEL 10 — CREADOR</div>
           </div>
         </div>
       </div>
 
+      {/* Navegación por pestañas */}
       <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
-        <button
-          type="button"
-          onClick={() => seleccionarPestana('registro')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-            pestanaActiva === 'registro'
-              ? 'bg-emerald-500 text-black'
-              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
-          }`}
-        >
-          1. Registro y Jerarquía
-        </button>
-
-        <button
-          type="button"
-          onClick={() => seleccionarPestana('progreso')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-            pestanaActiva === 'progreso'
-              ? 'bg-emerald-500 text-black'
-              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
-          }`}
-        >
-          2. Progreso y Supervisión
-        </button>
-
-        <button
-          type="button"
-          onClick={() => seleccionarPestana('bitacora')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-            pestanaActiva === 'bitacora'
-              ? 'bg-emerald-500 text-black'
-              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
-          }`}
-        >
-          3. Bitácora Personalizada
-        </button>
-
-        <button
-          type="button"
-          onClick={() => seleccionarPestana('guia')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-            pestanaActiva === 'guia'
-              ? 'bg-emerald-500 text-black'
-              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
-          }`}
-        >
-          4. Guía de Niveles (1–10)
-        </button>
+        {pestanas.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => seleccionarPestana(tab.id)}
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              pestanaActiva === tab.id
+                ? 'bg-emerald-500 text-black'
+                : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
+            }`}
+          >
+            {tab.etiqueta}
+          </button>
+        ))}
       </div>
 
+      {/* Banner de mensajes */}
       {mensaje && (
         <div
           className={`p-3 rounded-xl border text-xs font-semibold ${
@@ -634,6 +654,7 @@ export default function BovedaFamiliarAC01() {
         </div>
       )}
 
+      {/* Pestaña 1: Registro y Jerarquía */}
       {pestanaActiva === 'registro' && (
         <div className="space-y-6">
           <form
@@ -644,7 +665,9 @@ export default function BovedaFamiliarAC01() {
               <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
                 + Registrar Integrante de Bóveda Familiar (Cargo: Superuser)
               </h3>
-              <span className="text-[11px] text-slate-400">Inicio recomendado: Nivel 1 (Solo Ver)</span>
+              <span className="text-[11px] text-slate-400">
+                Inicio recomendado: Nivel 1 (Solo Ver)
+              </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
@@ -732,7 +755,9 @@ export default function BovedaFamiliarAC01() {
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
                 Jerarquía Activa en Bóveda Familiar
               </h3>
-              <span className="text-[11px] text-slate-400">{perfiles.length} perfiles registrados</span>
+              <span className="text-[11px] text-slate-400">
+                {perfiles.length} perfiles registrados
+              </span>
             </div>
 
             {cargando ? (
@@ -792,7 +817,9 @@ export default function BovedaFamiliarAC01() {
                                 {infoNivel.modo}
                               </span>
                             </div>
-                            <div className="text-[10px] text-slate-400 mt-0.5">{infoNivel.detalle}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              {infoNivel.detalle}
+                            </div>
                           </td>
                           <td className="py-3 px-4">
                             {esCreador ? (
@@ -812,7 +839,9 @@ export default function BovedaFamiliarAC01() {
                                 </button>
                                 <select
                                   value={p.nivel}
-                                  onChange={(e) => cambiarNivelHija(p.cedula, Number(e.target.value))}
+                                  onChange={(e) =>
+                                    cambiarNivelHija(p.cedula, Number(e.target.value))
+                                  }
                                   className="bg-[#030712] border border-slate-700 rounded px-2 py-1 text-[11px] text-amber-300 font-bold focus:outline-none focus:border-emerald-500"
                                 >
                                   {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
@@ -842,7 +871,9 @@ export default function BovedaFamiliarAC01() {
                               Bitácora
                             </button>
                             {esCreador ? (
-                              <span className="text-[10px] text-emerald-400 font-bold">PROTEGIDO</span>
+                              <span className="text-[10px] text-emerald-400 font-bold">
+                                PROTEGIDO
+                              </span>
                             ) : (
                               <button
                                 type="button"
@@ -868,6 +899,7 @@ export default function BovedaFamiliarAC01() {
         </div>
       )}
 
+      {/* Pestaña 2: Progreso y Supervisión */}
       {pestanaActiva === 'progreso' && (
         <div className="space-y-4">
           <div className="bg-black/40 border border-slate-800 rounded-xl p-5">
@@ -875,7 +907,8 @@ export default function BovedaFamiliarAC01() {
               Seguimiento Progresivo de Aprendizaje y Supervisión
             </h3>
             <p className="text-xs text-slate-400 mb-4">
-              Controla el avance de cada integrante paso a paso desde el Nivel 1 hasta el Nivel 9, manteniendo el Nivel 10 exclusivo para el Creador.
+              Controla el avance de cada integrante paso a paso desde el Nivel 1 hasta el Nivel 9,
+              manteniendo el Nivel 10 exclusivo para el Creador.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -948,6 +981,7 @@ export default function BovedaFamiliarAC01() {
         </div>
       )}
 
+      {/* Pestaña 3: Bitácora Personalizada */}
       {pestanaActiva === 'bitacora' && (
         <div className="bg-black/40 border border-slate-800 rounded-xl p-5 space-y-5">
           <div className="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -959,7 +993,8 @@ export default function BovedaFamiliarAC01() {
                 Creador: {perfilCreador.nombre}
               </h3>
               <p className="text-xs text-slate-400">
-                Cada integrante cuenta con su pestaña individual donde se registran sus movimientos, cambios de nivel y prácticas.
+                Cada integrante cuenta con su pestaña individual donde se registran sus movimientos,
+                cambios de nivel y prácticas.
               </p>
             </div>
             <span className="text-[11px] px-3 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-bold self-start">
@@ -1062,6 +1097,7 @@ export default function BovedaFamiliarAC01() {
         </div>
       )}
 
+      {/* Pestaña 4: Guía de Niveles */}
       {pestanaActiva === 'guia' && (
         <div className="bg-black/40 border border-slate-800 rounded-xl p-5 space-y-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
