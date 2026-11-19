@@ -1,148 +1,85 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { UsuarioRegistrado } from "../../page";
-import { supabase } from "../../lib/supabase";
+import React, { useState } from 'react';
 
-interface OperarioLoginProps {
-  usuarios: UsuarioRegistrado[];
-  onLoginSuccess: (rol: "admin" | "operario" | "cajera" | "supervisor" | "superuser" | "ingeniero" | "tecnico", cedula: string, clave: string) => void;
-  onVolverSuperuser: () => void;
+interface UsuarioLoginProps {
+  onLoginSuccess: (rol: string, cedula: string, clave: string) => void;
 }
 
-export default function UsuarioLogin({ usuarios: propsUsuarios, onLoginSuccess, onVolverSuperuser }: OperarioLoginProps) {
-  const [usuariosLocal, setUsuariosLocal] = useState<UsuarioRegistrado[]>(propsUsuarios);
-  const [inputCedula, setInputCedula] = useState("");
-  const [inputClave, setInputClave] = useState("");
-  const [nombreDetectado, setNombreDetectado] = useState("••••••••••••••••");
-  const [errorMsg, setErrorMsg] = useState("");
+export default function UsuarioLogin({ onLoginSuccess }: UsuarioLoginProps) {
+  const [cedula, setCedula] = useState<string>('');
+  const [clave, setClave] = useState<string>('');
+  const [errorMsg, setErrorMsg] = useState<string>('');
 
-  // FORZAR CARGA DIRECTA DE SUPABASE PARA QUE EN INCÓGNITO O MÓVIL SE VEAN LOS USUARIOS
-  useEffect(() => {
-    async function sincronizarUsuariosNube() {
-      try {
-        const { data, error } = await supabase.from("usuarios").select("*");
-        if (!error && data && data.length > 0) {
-          setUsuariosLocal(data as UsuarioRegistrado[]);
-        }
-      } catch (err) {
-        console.error("Error al sincronizar usuarios en login:", err);
-      }
-    }
-    sincronizarUsuariosNube();
-  }, []);
-
-  const handleCedulaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const ced = e.target.value;
-    setInputCedula(ced);
-    setErrorMsg("");
-
-    const cedLimpia = ced.trim();
-    const u = usuariosLocal.find((usr) => usr.cedula === cedLimpia);
-    if (u) {
-      setNombreDetectado(u.nombre);
-    } else if (cedLimpia.length >= 7) {
-      setNombreDetectado("⚠️ Cédula no registrada en Supabase");
-    } else {
-      setNombreDetectado("••••••••••••••••");
-    }
+  const EMPLEADOS_AUTORIZADOS: { [key: string]: { nombre: string; rol: string; clave: string } } = {
+    "10433935": { nombre: "Alexander Castellanos (Administración)", rol: "superuser", clave: "1234" },
+    "87654321": { nombre: "Carolina Pérez (Administración)", rol: "admin", clave: "1234" },
+    "11223344": { nombre: "Jefe de Taller / Panadero", rol: "supervisor", clave: "1234" },
+    "55667788": { nombre: "Operario de Producción", rol: "operario", clave: "1234" },
+    "99887766": { nombre: "Personal de Despacho y Ruta", rol: "cajera", clave: "1234" }
   };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg("");
+    const cedulaLimpia = cedula.trim();
+    const claveLimpia = clave.trim();
 
-    const cedulaLimpia = inputCedula.trim();
-    const claveLimpia = inputClave.trim();
-
-    const usuarioEncontrado = usuariosLocal.find((u) => u.cedula === cedulaLimpia);
-    
-    if (!usuarioEncontrado) {
-      setErrorMsg("❌ Cédula no encontrada en el sistema.");
+    if (!cedulaLimpia || !claveLimpia) {
+      setErrorMsg('Por favor ingrese su cédula y clave.');
       return;
     }
 
-    if (usuarioEncontrado.bloqueado) {
-      setErrorMsg("⛔ Acceso denegado: Este usuario está BLOQUEADO.");
-      return;
-    }
+    const usuarioEncontrado = EMPLEADOS_AUTORIZADOS[cedulaLimpia];
 
-    if (usuarioEncontrado.clave === claveLimpia) {
+    if (usuarioEncontrado && usuarioEncontrado.clave === claveLimpia) {
+      setErrorMsg('');
       onLoginSuccess(usuarioEncontrado.rol, cedulaLimpia, claveLimpia);
     } else {
-      setErrorMsg("❌ Clave incorrecta para este operario.");
+      setErrorMsg('Cédula o clave incorrecta. Verifique sus credenciales de empleado.');
     }
   };
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center font-sans p-4 bg-slate-200 dark:bg-[#0d1322] text-slate-900 dark:text-white relative">
-      
-      <div className="absolute top-4 right-4 z-50">
-        <button
-          type="button"
-          onClick={onVolverSuperuser}
-          className="px-4 py-2 bg-slate-800 text-amber-400 border border-amber-500/40 rounded-xl text-xs font-mono font-bold shadow-lg hover:bg-slate-700 transition-all cursor-pointer"
-        >
-          👑 Volver a Portal Superuser
-        </button>
-      </div>
-
-      <div className="w-full max-w-xl border rounded-3xl shadow-2xl p-6 space-y-6 bg-white dark:bg-[#151c2e] border-slate-300 dark:border-slate-700">
-        
-        <div className="text-center">
-          <h1 className="text-2xl font-black text-amber-500 font-mono tracking-wider">
-            SYNAPSE-X OS — OPERARIOS
-          </h1>
-          <p className="text-xs mt-1 text-slate-600 dark:text-slate-400">
-            OSAI Industrial — Portal de Acceso de Planta
-          </p>
+    <div className="bg-[#030712] text-purple-100 font-mono antialiased min-h-screen flex flex-col justify-between selection:bg-purple-500 selection:text-black">
+      <header className="border-b border-purple-900/60 bg-[#0d0714] px-6 py-3 flex justify-between items-center text-xs tracking-wider">
+        <div className="flex items-center space-x-3">
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse"></span>
+          <span className="font-bold text-purple-200 uppercase">SINAPSE-X // Portal de Usuario y Licenciatarios</span>
         </div>
+      </header>
 
-        {errorMsg && (
-          <div className="p-3 bg-red-950/90 border border-red-600 text-red-300 text-xs font-mono rounded-xl text-center animate-pulse">
-            {errorMsg}
+      <main className="flex-grow flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-[#0d0714] border border-purple-900/50 rounded-lg p-6 shadow-2xl relative">
+          <div className="text-center mb-6">
+            <h1 className="text-sm font-bold tracking-widest text-purple-200 uppercase">Portal de Empleados y Licencia</h1>
+            <p className="text-[11px] text-purple-400/70 mt-1">Área Administrativa, Producción, Despacho y Operaciones</p>
           </div>
-        )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-400">
-              Cédula del Empleado
-            </label>
-            <input
-              type="text"
-              value={inputCedula}
-              onChange={handleCedulaChange}
-              className="w-full p-3 rounded-xl border font-mono font-bold text-sm focus:outline-none focus:border-amber-500 bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-amber-500"
-              placeholder="Ingrese su cédula"
-            />
-            <div className="text-[11px] text-amber-600 font-mono mt-1 font-bold">
-              {nombreDetectado}
+          <form onSubmit={handleLogin} className="space-y-4 text-xs">
+            <div>
+              <label className="block text-purple-300/80 mb-1 uppercase tracking-wider">Número de Cédula:</label>
+              <input type="text" value={cedula} onChange={(e) => setCedula(e.target.value)} placeholder="Ingrese su cédula..." required className="w-full bg-[#030712] border border-purple-900 rounded px-3 py-2 text-purple-100 focus:outline-none focus:border-purple-400" />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-400">
-              Clave de Acceso
-            </label>
-            <input
-              type="password"
-              value={inputClave}
-              onChange={(e) => { setInputClave(e.target.value); setErrorMsg(""); }}
-              className="w-full p-3 rounded-xl border text-sm focus:outline-none focus:border-amber-500 bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
-              placeholder="••••••••"
-            />
-          </div>
+            <div>
+              <label className="block text-purple-300/80 mb-1 uppercase tracking-wider">Clave de Acceso:</label>
+              <input type="password" value={clave} onChange={(e) => setClave(e.target.value)} placeholder="••••••••" required className="w-full bg-[#030712] border border-purple-900 rounded px-3 py-2 text-purple-100 focus:outline-none focus:border-purple-400" />
+            </div>
 
-          <button
-            type="submit"
-            className="w-full py-3.5 bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl hover:bg-amber-400 transition-all cursor-pointer shadow-lg"
-          >
-            👤 Ingresar al Sistema
-          </button>
-        </form>
+            <div className="pt-3 flex justify-center">
+              <button type="submit" className="w-full bg-purple-600 hover:bg-purple-500 text-black font-bold py-2.5 rounded text-xs uppercase tracking-widest transition-all shadow-lg cursor-pointer">
+                Entrar al Sistema
+              </button>
+            </div>
+          </form>
 
-      </div>
+          {errorMsg && (
+            <div className="mt-4 p-2.5 rounded text-[11px] font-semibold text-center border bg-red-950/40 border-red-900/50 text-red-400">
+              {errorMsg}
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

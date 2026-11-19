@@ -16,6 +16,11 @@ export default function BotoneraInferior({
   const [tema, setTema] = useState<"oscuro" | "claro" | "sistema">("oscuro");
   const [actualizando, setActualizando] = useState(false);
 
+  // Estados de los LEDs de telemetría (Simulados en tiempo real o estables)
+  const [ledRed, setLedRed] = useState<"green" | "yellow" | "red">("green");
+  const [ledAI, setLedAI] = useState<"green" | "yellow" | "red">("green");
+  const [ledAuth, setLedAuth] = useState<"green" | "yellow" | "red">("green");
+
   // Aplicar el tema real al documento HTML
   useEffect(() => {
     const root = document.documentElement;
@@ -39,8 +44,28 @@ export default function BotoneraInferior({
     }, 400);
   };
 
+  // Funciones auxiliares para obtener la etiqueta de texto según el color del LED
+  const getRedLabel = (color: "green" | "yellow" | "red") => {
+    if (color === "green") return "Red de Planta: Estable OK";
+    if (color === "yellow") return "Red de Planta: Alta Latencia";
+    return "Red de Planta: Desconectado";
+  };
+
+  const getAILabel = (color: "green" | "yellow" | "red") => {
+    if (color === "green") return "Motor AI-OS: Operativo";
+    if (color === "yellow") return "Motor AI-OS: En Pausa";
+    return "Motor AI-OS: Alerta de Script";
+  };
+
+  const getAuthLabel = (color: "green" | "yellow" | "red") => {
+    if (color === "green") return "Seguridad/Sesión: Segura";
+    if (color === "yellow") return "Seguridad/Sesión: Expirando";
+    return "Seguridad/Sesión: Alerta Token";
+  };
+
   return (
     <div className="mt-auto shrink-0 border-t border-slate-800/90 bg-slate-950/95 p-3 space-y-2.5 select-none">
+      
       {/* 1. BOTÓN DE ACTUALIZAR SISTEMA */}
       <button
         onClick={handleActualizar}
@@ -61,9 +86,7 @@ export default function BotoneraInferior({
             type="button"
             onClick={() => setTema("claro")}
             className={`py-1.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer ${
-              tema === "claro"
-                ? "bg-amber-500 text-black shadow"
-                : "text-slate-400 hover:text-white"
+              tema === "claro" ? "bg-amber-500 text-black shadow" : "text-slate-400 hover:text-white"
             }`}
             title="Tema Claro"
           >
@@ -73,9 +96,7 @@ export default function BotoneraInferior({
             type="button"
             onClick={() => setTema("oscuro")}
             className={`py-1.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer ${
-              tema === "oscuro"
-                ? "bg-amber-500 text-black shadow"
-                : "text-slate-400 hover:text-white"
+              tema === "oscuro" ? "bg-amber-500 text-black shadow" : "text-slate-400 hover:text-white"
             }`}
             title="Tema Oscuro Industrial"
           >
@@ -85,9 +106,7 @@ export default function BotoneraInferior({
             type="button"
             onClick={() => setTema("sistema")}
             className={`py-1.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer ${
-              tema === "sistema"
-                ? "bg-amber-500 text-black shadow"
-                : "text-slate-400 hover:text-white"
+              tema === "sistema" ? "bg-amber-500 text-black shadow" : "text-slate-400 hover:text-white"
             }`}
             title="Automático según el dispositivo"
           >
@@ -96,7 +115,62 @@ export default function BotoneraInferior({
         </div>
       </div>
 
-      {/* 3. CONTROL DE ESTÉTICA / ACENTO INDUSTRIAL */}
+      {/* 3. PANEL DE TELEMETRÍA LED (3 bombillitos en líneas independientes con etiquetas dinámicas) */}
+      <div className="bg-black/80 border border-slate-800/80 rounded-xl p-2 space-y-1.5">
+        <span className="block text-[9px] font-mono uppercase tracking-wider text-slate-500 px-0.5">
+          Telemetría del Sistema
+        </span>
+        
+        {/* LED 1: Red de Planta */}
+        <div className="flex items-center gap-2 px-1">
+          <div
+            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+              ledRed === "green"
+                ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                : ledRed === "yellow"
+                ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"
+                : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"
+            }`}
+          />
+          <span className="text-[10px] font-mono text-slate-300 truncate">
+            {getRedLabel(ledRed)}
+          </span>
+        </div>
+
+        {/* LED 2: Motor AI-OS */}
+        <div className="flex items-center gap-2 px-1">
+          <div
+            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+              ledAI === "green"
+                ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                : ledAI === "yellow"
+                ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"
+                : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"
+            }`}
+          />
+          <span className="text-[10px] font-mono text-slate-300 truncate">
+            {getAILabel(ledAI)}
+          </span>
+        </div>
+
+        {/* LED 3: Seguridad y Sesión */}
+        <div className="flex items-center gap-2 px-1">
+          <div
+            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+              ledAuth === "green"
+                ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                : ledAuth === "yellow"
+                ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"
+                : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"
+            }`}
+          />
+          <span className="text-[10px] font-mono text-slate-300 truncate">
+            {getAuthLabel(ledAuth)}
+          </span>
+        </div>
+      </div>
+
+      {/* 4. CONTROL DE ESTÉTICA / ACENTO INDUSTRIAL */}
       {onChangeAcento && (
         <div className="flex items-center justify-between px-1 pt-0.5">
           <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
@@ -131,7 +205,7 @@ export default function BotoneraInferior({
         </div>
       )}
 
-      {/* 4. BOTÓN DE CERRAR SESIÓN */}
+      {/* 5. BOTÓN DE CERRAR SESIÓN */}
       <button
         type="button"
         onClick={onCerrarSesion}

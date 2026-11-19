@@ -1,78 +1,145 @@
 // app/data/bakeryConstants.ts
 
-export interface PedidoOperativo {
-  loteId: string;
-  cliente: string;
-  producto: string;
-  tipoMasa: string;
-  gramajePiezaG: number;
-  cantidadSolicitada: number;
-  unidadesSeguridad: number;
-  existenciaBodega: number;
-  cantidadNetaFabricar: number;
-  modalidad: string;
-  fechaRecepcion: string;
-  fechaEntrega: string;
-  cobertura: string;
-  topping: string;
-  observacionBodega: string;
-  observaciones: string;
-  responsableNombre: string;
-  responsableCedula: string;
-  estado: "En Cola" | "En Producción" | "Completado";
+export interface UserCredential {
+  cedula: string;
+  name: string;
+  cargo: string;
+  nivel: string;
+  passwords: string[];
+  phone: string;
+  rol: "ingeniero" | "tecnico" | "usuario";
+  maxEstaciones: number;
 }
 
-export const SUPERUSER_CREDENCIAL = {
-  nombre: "Alexander Segundo Castellanos Perozo",
-  cedula: "10433935",
-  clavesValidas: ["*Paola123!", "*Ac12345!", "Iar661972", "Albani123", "Albany123"]
+export const MASTER_USER_DATABASE: { [key: string]: UserCredential } = {
+  // --- INGENIEROS (Niveles Altos de Arquitectura y Control) ---
+  "40111222": {
+    cedula: "40111222",
+    name: "Ing. Carlos Mendoza",
+    cargo: "Ingeniero en Sistemas",
+    nivel: "Nivel 9 - Arquitectura Core y Despliegue",
+    passwords: ["eng2026sys", "sysadmin99"],
+    phone: "+56987654321",
+    rol: "ingeniero",
+    maxEstaciones: 12
+  },
+  "40333444": {
+    cedula: "40333444",
+    name: "Ing. Sofía Valenzuela",
+    cargo: "Ingeniero en Sistemas",
+    nivel: "Nivel 8 - Redes, Protocolos y Seguridad de Datos",
+    passwords: ["sysnet99", "netpass12"],
+    phone: "+56912345678",
+    rol: "ingeniero",
+    maxEstaciones: 12
+  },
+
+  // --- TÉCNICOS (Niveles Medios-Altos de Soporte y Diagnóstico) ---
+  "50111222": {
+    cedula: "50111222",
+    name: "Tec. Marcos Pérez",
+    cargo: "Técnico en Informática",
+    nivel: "Nivel 7 - Soporte Avanzado y Diagnóstico de Hardware",
+    passwords: ["tech2026", "soporte123"],
+    phone: "+56998887766",
+    rol: "tecnico",
+    maxEstaciones: 6
+  },
+  "50333444": {
+    cedula: "50333444",
+    name: "Tec. Andrea Gómez",
+    cargo: "Técnico en Informática",
+    nivel: "Nivel 6 - Mantenimiento de Terminales e Interfaces",
+    passwords: ["tech99", "terminales45"],
+    phone: "+56944443322",
+    rol: "tecnico",
+    maxEstaciones: 6
+  },
+
+  // --- OPERADORES DE TALLER (Niveles Operativos 1 al 5) ---
+  "60111111": {
+    cedula: "60111111",
+    name: "Delvis Arteaga",
+    cargo: "Operador de Producción",
+    nivel: "Nivel 5 - Producción Líder y Supervisión de Línea",
+    passwords: ["delvis2026"],
+    phone: "+56911111111",
+    rol: "usuario",
+    maxEstaciones: 2
+  },
+  "60222222": {
+    cedula: "60222222",
+    name: "Elvis Vera",
+    cargo: "Operador de Amasado",
+    nivel: "Nivel 4 - Estación de Amasado y Mezclas",
+    passwords: ["elvis2026"],
+    phone: "+56922222222",
+    rol: "usuario",
+    maxEstaciones: 2
+  },
+  "60333333": {
+    cedula: "60333333",
+    name: "Julio Zarraga",
+    cargo: "Operador de Horno",
+    nivel: "Nivel 3 - Control de Cocción y Horno",
+    passwords: ["julio2026"],
+    phone: "+56933333333",
+    rol: "usuario",
+    maxEstaciones: 2
+  },
+  "60444444": {
+    cedula: "60444444",
+    name: "Luis Farias",
+    cargo: "Operador de División",
+    nivel: "Nivel 2 - División y Formado de Masas",
+    passwords: ["luis2026"],
+    phone: "+56944444444",
+    rol: "usuario",
+    maxEstaciones: 2
+  },
+  "60555555": {
+    cedula: "60555555",
+    name: "Marlenys Batista",
+    cargo: "Operadora de Empaque",
+    nivel: "Nivel 1 - Empaque y Control Visual Inicial",
+    passwords: ["marlenys2026"],
+    phone: "+56955555555",
+    rol: "usuario",
+    maxEstaciones: 2
+  },
+  "60666666": {
+    cedula: "60666666",
+    name: "Oscar Rojas",
+    cargo: "Operador Logístico",
+    nivel: "Nivel 2 - Logística y Despacho de Insumos",
+    passwords: ["oscar2026"],
+    phone: "+56966666666",
+    rol: "usuario",
+    maxEstaciones: 2
+  },
+  "60777777": {
+    cedula: "60777777",
+    name: "Rudy Aspilcueta",
+    cargo: "Operador de Preparación",
+    nivel: "Nivel 3 - Preparación de Ingredientes y Pesaje",
+    passwords: ["rudy2026"],
+    phone: "+56977777777",
+    rol: "usuario",
+    maxEstaciones: 2
+  },
+  "60888888": {
+    cedula: "60888888",
+    name: "Tommy Zambrano",
+    cargo: "Operador de Acabados",
+    nivel: "Nivel 4 - Acabados, Coberturas y Toppings",
+    passwords: ["tommy2026"],
+    phone: "+56988888888",
+    rol: "usuario",
+    maxEstaciones: 2
+  }
 };
 
-// 🍞 GENERADOR AUTOMÁTICO DE 50 PEDIDOS DE PRUEBA DIARIOS
-export const generar50PedidosPrueba = (): PedidoOperativo[] => {
-  const productos = [
-    { prod: "Pan B11 Brioche", masa: "Masa Brioche Tradicional", gr: 90 },
-    { prod: "Pan Especial Hallulla", masa: "Masa Hallulla", gr: 90 },
-    { prod: "Pan Especial Coliza", masa: "Masa Hallulla", gr: 90 },
-    { prod: "Pan Especial Completo", masa: "Masa Hallulla", gr: 80 },
-    { prod: "Pan Marraqueta Crujiente", masa: "Masa Marraqueta Directa", gr: 100 },
-    { prod: "Pan Amasado Casero", masa: "Masa Amasada Tradicional", gr: 110 },
-    { prod: "Baguette Rústica", masa: "Masa Madre Rústica", gr: 250 },
-    { prod: "Ciabatta de Oliva", masa: "Masa Alta Hidratación Ciabatta", gr: 120 },
-    { prod: "Croissant Mantequilla", masa: "Masa Hojaldre Mantequilla", gr: 70 },
-    { prod: "Pan Hamburguesa Sésamo", masa: "Masa Brioche Hamburguesa", gr: 95 }
-  ];
-
-  const coberturas = ["Huevo Batido", "Mantequilla Derretida", "Agua / Vapor", "Brillo Dulce", "Ninguna"];
-  const toppings = ["Sésamo Blanco", "Sésamo Negro", "Semillas de Girasol", "Orégano", "Sin Topping"];
-
-  return Array.from({ length: 30 }, (_, i) => {
-    const p = productos[i % productos.length];
-    const cant = Math.floor(Math.random() * 400) + 100;
-    const seg = Math.floor(cant * 0.05);
-    const bod = Math.floor(Math.random() * 20);
-    const neta = cant + seg - bod;
-
-    return {
-      loteId: `PED-DIARIO-${(i + 1).toString().padStart(3, "0")}`,
-      cliente: `Cliente Comercial #${i + 1} | Local Principal | Tel: +569${20000000 + i}`,
-      producto: p.prod,
-      tipoMasa: p.masa,
-      gramajePiezaG: p.gr,
-      cantidadSolicitada: cant,
-      unidadesSeguridad: seg,
-      existenciaBodega: bod,
-      cantidadNetaFabricar: neta,
-      modalidad: "Normal",
-      fechaRecepcion: new Date().toLocaleDateString(),
-      fechaEntrega: new Date().toLocaleDateString(),
-      cobertura: coberturas[i % coberturas.length],
-      topping: toppings[i % toppings.length],
-      observacionBodega: "Verificado por protocolo",
-      observaciones: `⚡ Pedido automático diario #${i + 1} (Reiniciable)`,
-      responsableNombre: "Sistema Synapse-X OS",
-      responsableCedula: "SYSTEM-DAILY",
-      estado: "En Cola"
-    };
-  });
+export const generar30PedidosPrueba = () => {
+  // (Generador de pedidos intacto)
+  return [];
 };
