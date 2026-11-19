@@ -507,93 +507,77 @@ export default function Home() {
   if (!autenticado) {
     return (
       <div className="min-h-screen bg-[#030712] text-slate-100 font-mono flex flex-col md:flex-row selection:bg-cyan-500 selection:text-black">
-        {/* Barra lateral izquierda compacta (dividida en cuatro) con título y los 4 portales */}
-        <aside className="w-full md:w-28 shrink-0 border-b md:border-b-0 md:border-r border-slate-800/90 bg-slate-950/95 p-2 flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="pb-2 border-b border-slate-800/80 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-1">
-                <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0"></span>
-                <h1 className="text-[10px] font-bold tracking-wider text-cyan-300 uppercase truncate">
-                  SYNAPSE-X
+        {/* Barra lateral izquierda rectangular con los 4 botones */}
+        <aside className="w-full md:w-72 shrink-0 border-b md:border-b-0 md:border-r border-slate-800/90 bg-slate-950/95 p-4 flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="pb-3 border-b border-slate-800/80 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-2">
+                <span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shrink-0"></span>
+                <h1 className="text-xs font-bold tracking-wider text-cyan-300 uppercase">
+                  SYNAPSE-X OS
                 </h1>
               </div>
-              <p className="text-[8px] text-slate-400 mt-0.5 leading-tight">
-                Portales Acceso
+              <p className="text-[10px] text-slate-400 mt-1 leading-snug">
+                Selector Central de Portales
               </p>
             </div>
 
-            <nav className="flex flex-row md:flex-col gap-1.5" aria-label="Selector de Portales">
+            <nav className="flex flex-col gap-2.5" aria-label="Selector de Portales">
               <button
                 type="button"
                 onClick={() => cambiarPortal("creador")}
-                className={`flex-1 md:w-full text-left px-2 py-2 rounded-lg font-extrabold transition-all cursor-pointer flex items-center justify-between gap-1 ${
+                className={`w-full min-h-[52px] px-4 py-3 rounded-lg text-sm font-extrabold leading-none whitespace-nowrap transition-all cursor-pointer flex items-center justify-start gap-2.5 ${
                   portalSeleccionado === "creador"
                     ? "bg-emerald-500 text-black shadow-md shadow-emerald-500/20"
-                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
+                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-700/80"
                 }`}
               >
-                <span className="text-lg md:text-[22px] leading-tight animate-pulse truncate">
-                  👑 Creador
-                </span>
-                <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
-                  4 LED
-                </span>
+                <span>👑</span>
+                <span>Portal del Creador</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => cambiarPortal("ingeniero")}
-                className={`flex-1 md:w-full text-left px-2 py-2 rounded-lg font-extrabold transition-all cursor-pointer flex items-center justify-between gap-1 ${
+                className={`w-full min-h-[52px] px-4 py-3 rounded-lg text-sm font-extrabold leading-none whitespace-nowrap transition-all cursor-pointer flex items-center justify-start gap-2.5 ${
                   portalSeleccionado === "ingeniero"
                     ? "bg-cyan-500 text-black shadow-md shadow-cyan-500/20"
-                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
+                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-700/80"
                 }`}
               >
-                <span className="text-lg md:text-[22px] leading-tight animate-pulse truncate">
-                  ⚙️ Ing (ST)
-                </span>
-                <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
-                  3 LED
-                </span>
+                <span>⚙️</span>
+                <span>Portal del Ingeniero</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => cambiarPortal("tecnico")}
-                className={`flex-1 md:w-full text-left px-2 py-2 rounded-lg font-extrabold transition-all cursor-pointer flex items-center justify-between gap-1 ${
+                className={`w-full min-h-[52px] px-4 py-3 rounded-lg text-sm font-extrabold leading-none whitespace-nowrap transition-all cursor-pointer flex items-center justify-start gap-2.5 ${
                   portalSeleccionado === "tecnico"
                     ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
-                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
+                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-700/80"
                 }`}
               >
-                <span className="text-lg md:text-[22px] leading-tight animate-pulse truncate">
-                  🔧 Téc (ST)
-                </span>
-                <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
-                  3 LED
-                </span>
+                <span>🔧</span>
+                <span>Portal del Técnico</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => cambiarPortal("usuario")}
-                className={`flex-1 md:w-full text-left px-2 py-2 rounded-lg font-extrabold transition-all cursor-pointer flex items-center justify-between gap-1 ${
+                className={`w-full min-h-[52px] px-4 py-3 rounded-lg text-sm font-extrabold leading-none whitespace-nowrap transition-all cursor-pointer flex items-center justify-start gap-2.5 ${
                   portalSeleccionado === "usuario"
                     ? "bg-pink-500 text-black shadow-md shadow-pink-500/20"
-                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
+                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-700/80"
                 }`}
               >
-                <span className="text-lg md:text-[22px] leading-tight animate-pulse truncate">
-                  🏭 Empresa
-                </span>
-                <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
-                  3 LED
-                </span>
+                <span>🏭</span>
+                <span>Portal de Empleados</span>
               </button>
             </nav>
           </div>
 
-          <div className="hidden md:block pt-2 mt-4 border-t border-slate-900 text-[8px] text-slate-500 leading-tight">
+          <div className="hidden md:block pt-3 mt-4 border-t border-slate-900 text-[9px] text-slate-500 leading-tight">
             SYNAPSE-X OS © 2026
           </div>
         </aside>
