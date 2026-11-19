@@ -249,7 +249,7 @@ function PortalAccesoSimpleLED({
   };
 
   return (
-    <div className="w-full max-w-lg bg-[#070d1a] border border-slate-800 rounded-2xl p-5 shadow-2xl relative font-mono text-slate-100">
+    <div className="w-full max-w-2xl bg-[#070d1a] border border-slate-800 rounded-2xl p-6 shadow-2xl relative font-mono text-slate-100">
       <div className="mb-4 pb-3 border-b border-slate-800 flex items-center justify-between bg-black/60 px-4 py-2.5 rounded-xl">
         <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest">
           ESTADO LED:
@@ -282,9 +282,11 @@ function PortalAccesoSimpleLED({
         </div>
       </div>
 
-      <div className="text-center mb-5">
-        <h1 className="text-sm font-bold tracking-widest text-cyan-300 uppercase">{titulo}</h1>
-        <p className="text-[11px] text-slate-400 mt-1">{subtitulo}</p>
+      <div className="text-center mb-6">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-wide text-cyan-300 uppercase leading-tight animate-pulse">
+          {titulo}
+        </h1>
+        <p className="text-[11px] text-slate-400 mt-2">{subtitulo}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
@@ -473,7 +475,7 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-[#030712] text-slate-100 font-mono flex flex-col md:flex-row selection:bg-cyan-500 selection:text-black">
         {/* Barra lateral izquierda dedicada con título y los 4 portales */}
-        <aside className="w-full md:w-72 shrink-0 border-b md:border-b-0 md:border-r border-slate-800/90 bg-slate-950/95 p-5 flex flex-col justify-between">
+        <aside className="w-full md:w-96 shrink-0 border-b md:border-b-0 md:border-r border-slate-800/90 bg-slate-950/95 p-5 flex flex-col justify-between">
           <div className="space-y-5">
             <div className="pb-4 border-b border-slate-800/80">
               <div className="flex items-center space-x-2.5">
@@ -487,57 +489,73 @@ export default function Home() {
               </p>
             </div>
 
-            <nav className="flex flex-col gap-2" aria-label="Selector de Portales">
+            <nav className="flex flex-col gap-3" aria-label="Selector de Portales">
               <button
                 type="button"
                 onClick={() => cambiarPortal("creador")}
-                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
+                className={`w-full text-left px-4 py-3.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   portalSeleccionado === "creador"
                     ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/20"
-                    : "bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-800"
+                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span>👑 Portal Creador</span>
-                <span className="text-[10px] opacity-80">4 LED</span>
+                <span className="text-xl md:text-2xl leading-tight animate-pulse">
+                  👑 Portal Creador
+                </span>
+                <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
+                  4 LED
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => cambiarPortal("ingeniero")}
-                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
+                className={`w-full text-left px-4 py-3.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   portalSeleccionado === "ingeniero"
                     ? "bg-cyan-500 text-black shadow-lg shadow-cyan-500/20"
-                    : "bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-800"
+                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span>⚙️ Portal Ingeniero (ST)</span>
-                <span className="text-[10px] opacity-80">3 LED</span>
+                <span className="text-xl md:text-2xl leading-tight animate-pulse">
+                  ⚙️ Portal Ingeniero (ST)
+                </span>
+                <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
+                  3 LED
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => cambiarPortal("tecnico")}
-                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
+                className={`w-full text-left px-4 py-3.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   portalSeleccionado === "tecnico"
                     ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20"
-                    : "bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-800"
+                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span>🔧 Portal Técnico (ST)</span>
-                <span className="text-[10px] opacity-80">3 LED</span>
+                <span className="text-xl md:text-2xl leading-tight animate-pulse">
+                  🔧 Portal Técnico (ST)
+                </span>
+                <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
+                  3 LED
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => cambiarPortal("usuario")}
-                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
+                className={`w-full text-left px-4 py-3.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   portalSeleccionado === "usuario"
                     ? "bg-purple-500 text-black shadow-lg shadow-purple-500/20"
-                    : "bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-800"
+                    : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span>🏭 Portal Empresa / Operadores</span>
-                <span className="text-[10px] opacity-80">3 LED</span>
+                <span className="text-xl md:text-2xl leading-tight animate-pulse">
+                  🏭 Portal Empresa / Operadores
+                </span>
+                <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
+                  3 LED
+                </span>
               </button>
             </nav>
           </div>
@@ -549,13 +567,15 @@ export default function Home() {
 
         {/* Área central derecha con el formulario del portal activo */}
         <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8">
-          <div className="w-full max-w-xl flex flex-col items-center">
+          <div className="w-full max-w-2xl flex flex-col items-center">
             {portalSeleccionado === "creador" && (
-              <CreadorLogin
-                onLoginSuccess={(rol, cedula) => {
-                  handleLoginSuccess(rol, cedula, "10");
-                }}
-              />
+              <div className="w-full flex flex-col items-center [&_.text-sm]:text-2xl [&_.text-sm]:md:text-3xl [&_.text-sm]:leading-tight">
+                <CreadorLogin
+                  onLoginSuccess={(rol, cedula) => {
+                    handleLoginSuccess(rol, cedula, "10");
+                  }}
+                />
+              </div>
             )}
 
             {portalSeleccionado === "ingeniero" && (
