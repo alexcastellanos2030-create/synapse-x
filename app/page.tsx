@@ -507,13 +507,13 @@ export default function Home() {
   if (!autenticado) {
     return (
       <div className="min-h-screen bg-[#030712] text-slate-100 font-mono flex flex-col md:flex-row selection:bg-cyan-500 selection:text-black">
-        {/* Barra lateral izquierda con los 4 botones de baja altura y texto al doble */}
-        <aside className="w-full md:w-[440px] shrink-0 border-b md:border-b-0 md:border-r border-slate-800/90 bg-slate-950/95 p-3.5 flex flex-col justify-between">
+        {/* Barra lateral izquierda compacta con botones ajustados al tamaño de letra de ESTADO LED */}
+        <aside className="w-full md:w-52 shrink-0 border-b md:border-b-0 md:border-r border-slate-800/90 bg-slate-950/95 p-3 flex flex-col justify-between">
           <div className="space-y-3">
             <div className="pb-2 border-b border-slate-800/80 text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-2">
-                <span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shrink-0"></span>
-                <h1 className="text-xs font-bold tracking-wider text-cyan-300 uppercase">
+                <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0"></span>
+                <h1 className="text-[11px] font-bold tracking-widest text-cyan-300 uppercase">
                   SYNAPSE-X OS
                 </h1>
               </div>
@@ -526,53 +526,53 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => cambiarPortal("creador")}
-                className={`w-full h-7 min-h-[26px] px-3 py-0.5 rounded-lg font-extrabold leading-none whitespace-nowrap overflow-hidden transition-all cursor-pointer flex items-center justify-start gap-2 ${
+                className={`w-full px-3 py-2 rounded-lg text-[11px] font-bold tracking-widest leading-none whitespace-nowrap transition-all cursor-pointer flex items-center justify-start gap-2 ${
                   portalSeleccionado === "creador"
                     ? "bg-emerald-500 text-black shadow-md shadow-emerald-500/20"
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-700/80"
                 }`}
               >
-                <span className="text-lg leading-none">👑</span>
-                <span className="text-[28px] leading-none">Portal del Creador</span>
+                <span className="text-xs leading-none">👑</span>
+                <span>Portal del Creador</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => cambiarPortal("ingeniero")}
-                className={`w-full h-7 min-h-[26px] px-3 py-0.5 rounded-lg font-extrabold leading-none whitespace-nowrap overflow-hidden transition-all cursor-pointer flex items-center justify-start gap-2 ${
+                className={`w-full px-3 py-2 rounded-lg text-[11px] font-bold tracking-widest leading-none whitespace-nowrap transition-all cursor-pointer flex items-center justify-start gap-2 ${
                   portalSeleccionado === "ingeniero"
                     ? "bg-cyan-500 text-black shadow-md shadow-cyan-500/20"
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-700/80"
                 }`}
               >
-                <span className="text-lg leading-none">⚙️</span>
-                <span className="text-[28px] leading-none">Portal del Ingeniero</span>
+                <span className="text-xs leading-none">⚙️</span>
+                <span>Portal del Ingeniero</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => cambiarPortal("tecnico")}
-                className={`w-full h-7 min-h-[26px] px-3 py-0.5 rounded-lg font-extrabold leading-none whitespace-nowrap overflow-hidden transition-all cursor-pointer flex items-center justify-start gap-2 ${
+                className={`w-full px-3 py-2 rounded-lg text-[11px] font-bold tracking-widest leading-none whitespace-nowrap transition-all cursor-pointer flex items-center justify-start gap-2 ${
                   portalSeleccionado === "tecnico"
                     ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-700/80"
                 }`}
               >
-                <span className="text-lg leading-none">🔧</span>
-                <span className="text-[28px] leading-none">Portal del Técnico</span>
+                <span className="text-xs leading-none">🔧</span>
+                <span>Portal del Técnico</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => cambiarPortal("usuario")}
-                className={`w-full h-7 min-h-[26px] px-3 py-0.5 rounded-lg font-extrabold leading-none whitespace-nowrap overflow-hidden transition-all cursor-pointer flex items-center justify-start gap-2 ${
+                className={`w-full px-3 py-2 rounded-lg text-[11px] font-bold tracking-widest leading-none whitespace-nowrap transition-all cursor-pointer flex items-center justify-start gap-2 ${
                   portalSeleccionado === "usuario"
                     ? "bg-pink-500 text-black shadow-md shadow-pink-500/20"
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-700/80"
                 }`}
               >
-                <span className="text-lg leading-none">🏭</span>
-                <span className="text-[28px] leading-none">Portal de Empleados</span>
+                <span className="text-xs leading-none">🏭</span>
+                <span>Portal de Empleados</span>
               </button>
             </nav>
           </div>
