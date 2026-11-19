@@ -27,6 +27,43 @@ const CLAVES_SESION = [
   "synapse_estacion_activa",
 ];
 
+const ESTILOS_PORTAL: Record<
+  Exclude<PortalTipo, "creador">,
+  {
+    card: string;
+    ledBarText: string;
+    titulo: string;
+    subtitulo: string;
+    focusInput: string;
+    emblema: string;
+  }
+> = {
+  ingeniero: {
+    card: "bg-[#06111f] border-cyan-500/45 shadow-[0_0_28px_rgba(6,182,212,0.12)]",
+    ledBarText: "text-cyan-300",
+    titulo: "text-cyan-300",
+    subtitulo: "text-cyan-200/70",
+    focusInput: "focus:border-cyan-400",
+    emblema: "⚙️",
+  },
+  tecnico: {
+    card: "bg-[#140d06] border-amber-500/45 shadow-[0_0_28px_rgba(245,158,11,0.12)]",
+    ledBarText: "text-amber-300",
+    titulo: "text-amber-300",
+    subtitulo: "text-amber-200/70",
+    focusInput: "focus:border-amber-400",
+    emblema: "🔧",
+  },
+  usuario: {
+    card: "bg-[#140711] border-pink-500/45 shadow-[0_0_28px_rgba(236,72,153,0.12)]",
+    ledBarText: "text-pink-300",
+    titulo: "text-pink-300",
+    subtitulo: "text-pink-200/70",
+    focusInput: "focus:border-pink-400",
+    emblema: "🏭",
+  },
+};
+
 const OPERADORES_RESPALDO: Record<Exclude<PortalTipo, "creador">, OperadorPortal[]> = {
   ingeniero: [
     {
@@ -110,6 +147,8 @@ function PortalAccesoSimpleLED({
   const [led3, setLed3] = useState<LedEstado>("white");
   const [mensaje, setMensaje] = useState("Paso 1: Ingrese su número de cédula.");
   const [paso1Ok, setPaso1Ok] = useState(false);
+
+  const estilo = ESTILOS_PORTAL[portal];
 
   useEffect(() => {
     setCedula("");
@@ -249,9 +288,11 @@ function PortalAccesoSimpleLED({
   };
 
   return (
-    <div className="w-full max-w-2xl bg-[#070d1a] border border-slate-800 rounded-2xl p-6 shadow-2xl relative font-mono text-slate-100">
-      <div className="mb-4 pb-3 border-b border-slate-800 flex items-center justify-between bg-black/60 px-4 py-2.5 rounded-xl">
-        <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest">
+    <div
+      className={`w-full max-w-2xl border rounded-2xl p-6 shadow-2xl relative font-mono text-slate-100 transition-colors ${estilo.card}`}
+    >
+      <div className="mb-4 pb-3 border-b border-slate-800/90 flex items-center justify-between bg-black/60 px-4 py-2.5 rounded-xl">
+        <span className={`text-[11px] font-bold uppercase tracking-widest ${estilo.ledBarText}`}>
           ESTADO LED:
         </span>
         <div className="flex items-center space-x-4">
@@ -283,10 +324,12 @@ function PortalAccesoSimpleLED({
       </div>
 
       <div className="text-center mb-6">
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-wide text-cyan-300 uppercase leading-tight animate-pulse">
-          {titulo}
+        <h1
+          className={`text-xl md:text-2xl font-extrabold tracking-wide uppercase leading-tight animate-pulse ${estilo.titulo}`}
+        >
+          {estilo.emblema} {titulo} {estilo.emblema}
         </h1>
-        <p className="text-[11px] text-slate-400 mt-2">{subtitulo}</p>
+        <p className={`text-[11px] mt-2 ${estilo.subtitulo}`}>{subtitulo}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
@@ -301,7 +344,7 @@ function PortalAccesoSimpleLED({
             onChange={(e) => handleCedula(e.target.value)}
             placeholder="Ingrese su cédula..."
             required
-            className="w-full bg-[#030712] border border-slate-700 rounded px-3 py-2 text-slate-100 focus:outline-none focus:border-cyan-400"
+            className={`w-full bg-[#030712] border border-slate-700 rounded px-3 py-2 text-slate-100 focus:outline-none ${estilo.focusInput}`}
           />
         </div>
 
@@ -329,7 +372,7 @@ function PortalAccesoSimpleLED({
             disabled={!paso1Ok}
             placeholder="••••••••••••"
             required
-            className="w-full bg-[#030712] border border-slate-700 rounded px-3 py-2 text-slate-100 focus:outline-none focus:border-cyan-400 disabled:opacity-50"
+            className={`w-full bg-[#030712] border border-slate-700 rounded px-3 py-2 text-slate-100 focus:outline-none ${estilo.focusInput} disabled:opacity-50`}
           />
         </div>
 
@@ -499,7 +542,7 @@ export default function Home() {
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span className="text-xl md:text-2xl leading-tight animate-pulse">
+                <span className="text-xl md:text-[22px] leading-tight animate-pulse">
                   👑 Portal Creador
                 </span>
                 <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
@@ -516,7 +559,7 @@ export default function Home() {
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span className="text-xl md:text-2xl leading-tight animate-pulse">
+                <span className="text-xl md:text-[22px] leading-tight animate-pulse">
                   ⚙️ Portal Ingeniero (ST)
                 </span>
                 <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
@@ -533,7 +576,7 @@ export default function Home() {
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span className="text-xl md:text-2xl leading-tight animate-pulse">
+                <span className="text-xl md:text-[22px] leading-tight animate-pulse">
                   🔧 Portal Técnico (ST)
                 </span>
                 <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
@@ -546,11 +589,11 @@ export default function Home() {
                 onClick={() => cambiarPortal("usuario")}
                 className={`w-full text-left px-4 py-3.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   portalSeleccionado === "usuario"
-                    ? "bg-purple-500 text-black shadow-lg shadow-purple-500/20"
+                    ? "bg-pink-500 text-black shadow-lg shadow-pink-500/20"
                     : "bg-slate-900/90 text-slate-200 hover:bg-slate-800 border border-slate-800"
                 }`}
               >
-                <span className="text-xl md:text-2xl leading-tight animate-pulse">
+                <span className="text-xl md:text-[22px] leading-tight animate-pulse">
                   🏭 Portal Empresa / Operadores
                 </span>
                 <span className="text-[8px] opacity-75 uppercase tracking-tighter shrink-0">
@@ -569,7 +612,7 @@ export default function Home() {
         <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8">
           <div className="w-full max-w-2xl flex flex-col items-center">
             {portalSeleccionado === "creador" && (
-              <div className="w-full flex flex-col items-center [&_.text-sm]:text-2xl [&_.text-sm]:md:text-3xl [&_.text-sm]:leading-tight">
+              <div className="w-full flex flex-col items-center [&>div]:border-emerald-500/45 [&>div]:bg-[#06140f] [&>div]:shadow-[0_0_28px_rgba(16,185,129,0.12)] [&_h1]:!text-xl [&_h1]:md:!text-2xl [&_h1]:!leading-tight [&_h1]:!text-emerald-400">
                 <CreadorLogin
                   onLoginSuccess={(rol, cedula) => {
                     handleLoginSuccess(rol, cedula, "10");
