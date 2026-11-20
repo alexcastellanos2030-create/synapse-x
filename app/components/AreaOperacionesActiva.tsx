@@ -5,6 +5,7 @@ import SidebarCreador from "./AreaCreador/SidebarCreador";
 import SidebarServicioTecnico from "./AreaServicioTecnico/SidebarServicioTecnico";
 import SidebarUsuario from "./AreaUsuario/SidebarUsuario";
 import BovedaFamiliarAC01 from "./AreaCreador/PortalesCreador/BovedaFamiliarAC01";
+import DashboardAU00 from "./AreaUsuario/DashboardAU00";
 
 interface AreaOperacionesActivaProps {
   rolActivo: string;
@@ -40,27 +41,37 @@ export default function AreaOperacionesActiva({
     cedulaActiva === "10433935" || nivelActivo.toLowerCase().includes("nivel 10");
 
   const navegarArea = (nuevaArea: string) => {
+    if (nuevaArea === "codigo") {
+      if (esCreadorPrincipal || esBovedaFamiliarActiva) {
+        setAreaActiva("creador");
+        setEstacionActiva("AC00");
+        setVerAreaCodigos(true);
+      }
+      return;
+    }
+
     setVerAreaCodigos(false);
     setAreaActiva(nuevaArea);
+
     if (nuevaArea === "creador") {
       setEstacionActiva("AC01");
     } else if (nuevaArea === "st" || nuevaArea === "superuser") {
       setAreaActiva("st");
       setEstacionActiva("ST01");
     } else if (nuevaArea === "usuario") {
-      setEstacionActiva("AU01");
+      setEstacionActiva("AU00");
     }
   };
 
   const abrirAreaCodigos = () => {
-    if (!esCreadorPrincipal) return;
+    if (!esCreadorPrincipal && !esBovedaFamiliarActiva) return;
     setAreaActiva("creador");
     setEstacionActiva("AC00");
     setVerAreaCodigos(true);
   };
 
   const handleSeleccionEstacionCreador = (estacion: string) => {
-    if (estacion === "AC00" && esCreadorPrincipal) {
+    if (estacion === "AC00" && (esCreadorPrincipal || esBovedaFamiliarActiva)) {
       setEstacionActiva("AC00");
       setVerAreaCodigos(true);
       return;
@@ -79,12 +90,16 @@ export default function AreaOperacionesActiva({
     !verAreaCodigos &&
     (estacionActiva === "AC01" || !estacionActiva);
 
+  const mostrarDashboardAU00 =
+    areaActiva === "usuario" &&
+    (!estacionActiva || estacionActiva === "AU00");
+
   return (
     <div className="flex h-screen bg-[#030712] text-slate-100 font-mono overflow-hidden">
       {/* Barra sidebar del Creador */}
       {areaActiva === "creador" && (
         <SidebarCreador
-          areaActiva={areaActiva}
+          areaActiva={verAreaCodigos ? "codigo" : areaActiva}
           onChangeArea={navegarArea}
           rolActivo={rolActivo}
           estacionActiva={verAreaCodigos ? "AC00" : estacionActiva}
@@ -104,6 +119,8 @@ export default function AreaOperacionesActiva({
           areaActiva={areaActiva}
           onChangeArea={navegarArea}
           rolActivo={rolActivo}
+          cedulaActiva={cedulaActiva}
+          esBovedaFamiliarActiva={esBovedaFamiliarActiva}
           estacionActiva={estacionActiva}
           setEstacionActiva={setEstacionActiva}
           handleCerrarSesion={onCerrarSesion}
@@ -116,6 +133,8 @@ export default function AreaOperacionesActiva({
           areaActiva={areaActiva}
           onChangeArea={navegarArea}
           rolActivo={rolActivo}
+          cedulaActiva={cedulaActiva}
+          esBovedaFamiliarActiva={esBovedaFamiliarActiva}
           estacionActiva={estacionActiva}
           setEstacionActiva={setEstacionActiva}
           handleCerrarSesion={onCerrarSesion}
@@ -128,7 +147,8 @@ export default function AreaOperacionesActiva({
           <div className="flex items-center space-x-3">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
             <span className="text-xs font-bold tracking-wider text-slate-200">
-              ESTACIÓN ACTIVA: <span className="text-cyan-400">{estacionActiva}</span>
+              ESTACIÓN ACTIVA:{" "}
+              <span className="text-cyan-400">{estacionActiva || "AU00"}</span>
             </span>
           </div>
 
@@ -142,51 +162,64 @@ export default function AreaOperacionesActiva({
           </div>
         </header>
 
-        <div className="flex-1 p-6 overflow-y-auto space-y-5">
+        <div className="flex-1 overflow-y-auto">
           {avisoActualizacion && (
-            <div className="max-w-6xl mx-auto px-4 py-2.5 rounded-xl bg-emerald-950/50 border border-emerald-500/40 text-xs md:text-sm text-emerald-300 font-semibold">
+            <div className="max-w-6xl mx-auto mt-4 px-4 py-2.5 rounded-xl bg-emerald-950/50 border border-emerald-500/40 text-xs md:text-sm text-emerald-300 font-semibold">
               {avisoActualizacion}
             </div>
           )}
 
           {esBovedaFamiliarActiva && !esCreadorPrincipal && (
-            <div className="max-w-6xl mx-auto px-4 py-2.5 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs md:text-sm text-cyan-200">
-              Acceso Familiar (Nivel 1 - Solo Ver): Puedes recorrer y ver todas las áreas del sistema
-              operativo. El área de códigos permanece reservada hasta autorización expresa del Creador.
+            <div className="max-w-6xl mx-auto mt-4 px-4 py-2.5 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs md:text-sm text-cyan-200">
+              Acceso Familiar: Puedes recorrer las áreas habilitadas del sistema operativo. El área
+              de códigos permanece reservada hasta autorización expresa del Creador.
             </div>
           )}
 
-          {verAreaCodigos && esCreadorPrincipal ? (
-            <div className="max-w-5xl mx-auto bg-slate-900/70 border border-amber-500/40 rounded-2xl p-6 shadow-xl space-y-4">
-              <h1 className="text-xl md:text-2xl font-extrabold text-amber-400 tracking-wide uppercase">
-                🔐 Área Reservada de Códigos y Configuración Maestra
-              </h1>
-              <h2 className="text-sm md:text-base font-semibold text-amber-200">
-                Control exclusivo del Creador del sistema operativo
-              </h2>
-              <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
-                Desde este espacio administras la configuración maestra de Synapse-X (OSAI
-                Industrial). Las cuentas de Nivel 1 de la bóveda familiar no acceden a esta vista sin
-                tu autorización.
-              </p>
+          {verAreaCodigos && (esCreadorPrincipal || esBovedaFamiliarActiva) ? (
+            <div className="p-6">
+              <div className="max-w-5xl mx-auto bg-slate-900/70 border border-amber-500/40 rounded-2xl p-6 shadow-xl space-y-4">
+                <h1 className="text-xl md:text-2xl font-extrabold text-amber-400 tracking-wide uppercase">
+                  🔐 Área Reservada de Códigos y Configuración Maestra
+                </h1>
+                <h2 className="text-sm md:text-base font-semibold text-amber-200">
+                  Control del Creador y Superusers del sistema operativo
+                </h2>
+                <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+                  Desde este espacio administras la configuración maestra de Synapse-X (OSAI
+                  Industrial).
+                </p>
+              </div>
             </div>
           ) : mostrarBovedaFamiliar ? (
-            <BovedaFamiliarAC01 key={`boveda-${refreshToken}`} />
+            <div className="p-6">
+              <BovedaFamiliarAC01 key={`boveda-${refreshToken}`} />
+            </div>
+          ) : mostrarDashboardAU00 ? (
+            <DashboardAU00
+              rolActivo={rolActivo}
+              cedulaActiva={cedulaActiva}
+              estacionActiva={estacionActiva || "AU00"}
+              onSeleccionarEstacion={setEstacionActiva}
+              onCambiarArea={navegarArea}
+            />
           ) : (
-            <div className="max-w-5xl mx-auto bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl space-y-4">
-              <h1 className="text-xl md:text-2xl font-extrabold text-cyan-400 tracking-wide uppercase">
-                Consola de Operaciones — Estación {estacionActiva}
-              </h1>
-              <h2 className="text-sm md:text-base font-semibold text-slate-200">
-                Entorno de trabajo activo y sesión persistente
-              </h2>
-              <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
-                Bienvenido al entorno de trabajo unificado. La sesión se mantiene retenida de forma
-                persistente para continuar operando sin interrupciones.
-              </p>
-              <div className="p-4 rounded-xl bg-black/40 border border-slate-800 text-xs md:text-sm text-slate-300 font-mono">
-                <span className="text-emerald-400 font-bold">ESTADO DE PERSISTENCIA:</span> Sesión
-                blindada y activa.
+            <div className="p-6">
+              <div className="max-w-5xl mx-auto bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl space-y-4">
+                <h1 className="text-xl md:text-2xl font-extrabold text-cyan-400 tracking-wide uppercase">
+                  Consola de Operaciones — Estación {estacionActiva}
+                </h1>
+                <h2 className="text-sm md:text-base font-semibold text-slate-200">
+                  Entorno de trabajo activo y sesión persistente
+                </h2>
+                <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+                  Bienvenido al entorno de trabajo unificado. La sesión se mantiene retenida de forma
+                  persistente para continuar operando sin interrupciones.
+                </p>
+                <div className="p-4 rounded-xl bg-black/40 border border-slate-800 text-xs md:text-sm text-slate-300 font-mono">
+                  <span className="text-emerald-400 font-bold">ESTADO DE PERSISTENCIA:</span> Sesión
+                  blindada y activa.
+                </div>
               </div>
             </div>
           )}

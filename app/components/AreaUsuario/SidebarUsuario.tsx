@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ChefHat,
   ChevronLeft,
@@ -18,8 +18,15 @@ import {
   Warehouse,
   Truck,
   FileText,
+  Sun,
+  Moon,
+  Monitor,
+  LogOut,
+  Home,
 } from "lucide-react";
-import BotoneraInferior from "../BotoneraInferior";
+
+export type TipoUsuarioSistema = "prueba" | "real";
+export type TemaSidebarUsuario = "claro" | "oscuro" | "sistema";
 
 interface SidebarUsuarioProps {
   areaActiva: "usuario" | "superuser" | "st" | "creador" | "codigo" | string;
@@ -27,6 +34,7 @@ interface SidebarUsuarioProps {
   rolActivo: string;
   cedulaActiva?: string;
   esBovedaFamiliarActiva?: boolean;
+  tipoUsuario?: TipoUsuarioSistema;
   estacionActiva: string;
   setEstacionActiva: (estacion: string) => void;
   handleCerrarSesion: () => void;
@@ -44,12 +52,29 @@ export default function SidebarUsuario({
   rolActivo,
   cedulaActiva = "",
   esBovedaFamiliarActiva = false,
+  tipoUsuario = "real",
   estacionActiva,
   setEstacionActiva,
   handleCerrarSesion,
 }: SidebarUsuarioProps) {
   const [colapsado, setColapsado] = useState<boolean>(false);
-  const [acentoColor, setAcentoColor] = useState<"amber" | "emerald" | "orange">("amber");
+  const [tema, setTema] = useState<TemaSidebarUsuario>("oscuro");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const root = document.documentElement;
+    if (tema === "claro") {
+      root.classList.remove("dark");
+      root.style.colorScheme = "light";
+    } else if (tema === "oscuro") {
+      root.classList.add("dark");
+      root.style.colorScheme = "dark";
+    } else {
+      const prefiereOscuro = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      root.classList.toggle("dark", prefiereOscuro);
+      root.style.colorScheme = prefiereOscuro ? "dark" : "light";
+    }
+  }, [tema]);
 
   const cedulaLimpia = String(cedulaActiva || "").trim();
   const rolLimpio = String(rolActivo || "").toLowerCase().trim();
@@ -64,6 +89,7 @@ export default function SidebarUsuario({
     !esNucleoFamiliar &&
     (rolLimpio.includes("ingeniero") ||
       rolLimpio.includes("tecnico") ||
+      rolLimpio.includes("técnico") ||
       rolLimpio === "st" ||
       rolLimpio === "servicio_tecnico");
 
@@ -79,74 +105,61 @@ export default function SidebarUsuario({
     { id: "AU09", label: "Protocolos", icon: FileText, color: "text-teal-400" },
   ];
 
-  const botonesAreas = (() => {
-    if (esNucleoFamiliar) {
-      return [
-        {
-          id: "usuario",
-          label: "Área de Usuario",
-          estacion: "AU01",
-          icon: User,
-          clase: "bg-purple-600/30 border-purple-500/40 text-purple-300",
-        },
-        {
-          id: "st",
-          label: "Área de Servicio Técnico",
-          estacion: "ST01",
-          icon: Wrench,
-          clase: "bg-slate-900 hover:bg-slate-800 border-slate-800 text-cyan-400",
-        },
-        {
-          id: "creador",
-          label: "Área de Creador",
-          estacion: "AC01",
-          icon: Crown,
-          clase: "bg-slate-900 hover:bg-slate-800 border-slate-800 text-amber-400",
-        },
-        {
-          id: "codigo",
-          label: "Área de Código",
-          estacion: "CD01",
-          icon: Code2,
-          clase: "bg-slate-900 hover:bg-slate-800 border-slate-800 text-emerald-400",
-        },
-      ];
-    }
+  // Siempre mostramos los 4 iconos arriba; habilitados según perfil y jerarquía
+  const botonesAreas = [
+    {
+      id: "usuario",
+      label: "Área de Usuario",
+      estacion: "AU00",
+      icon: User,
+      habilitado: true,
+      activoClase: "bg-purple-600/35 border-purple-400/60 text-purple-200",
+      libreClase: "bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-purple-300",
+    },
+    {
+      id: "st",
+      label: "Área de Servicio Técnico",
+      estacion: "ST01",
+      icon: Wrench,
+      habilitado: esNucleoFamiliar || esTecnicoOIngeniero,
+      activoClase: "bg-cyan-600/35 border-cyan-400/60 text-cyan-200",
+      libreClase: "bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-cyan-400",
+    },
+    {
+      id: "creador",
+      label: "Área de Creador",
+      estacion: "AC01",
+      icon: Crown,
+      habilitado: esNucleoFamiliar,
+      activoClase: "bg-amber-500/30 border-amber-400/60 text-amber-200",
+      libreClase: "bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-amber-400",
+    },
+    {
+      id: "codigo",
+      label: "Área de Código",
+      estacion: "CD01",
+      icon: Code2,
+      habilitado: esNucleoFamiliar,
+      activoClase: "bg-emerald-500/30 border-emerald-400/60 text-emerald-200",
+      libreClase: "bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-emerald-400",
+    },
+  ];
 
-    if (esTecnicoOIngeniero) {
-      return [
-        {
-          id: "usuario",
-          label: "Área de Usuario",
-          estacion: "AU01",
-          icon: User,
-          clase: "bg-purple-600/30 border-purple-500/40 text-purple-300",
-        },
-        {
-          id: "st",
-          label: "Área de Servicio Técnico",
-          estacion: "ST01",
-          icon: Wrench,
-          clase: "bg-slate-900 hover:bg-slate-800 border-slate-800 text-cyan-400",
-        },
-      ];
-    }
+  const botonesTema: {
+    id: TemaSidebarUsuario;
+    titulo: string;
+    Icono: React.ComponentType<{ className?: string }>;
+  }[] = [
+    { id: "claro", titulo: "Claro", Icono: Sun },
+    { id: "oscuro", titulo: "Oscuro", Icono: Moon },
+    { id: "sistema", titulo: "Sistema", Icono: Monitor },
+  ];
 
-    // Personal de la empresa (Área de Usuario): solo el botón de Área de Usuario hacia la página principal
-    return [
-      {
-        id: "usuario",
-        label: "Área de Usuario",
-        estacion: "AU01",
-        icon: User,
-        clase: "bg-purple-600/30 border-purple-500/40 text-purple-300",
-      },
-    ];
-  })();
+  const estacionNormalizada = estacionActiva || "AU00";
 
   return (
     <aside
-      className={`bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 select-none transition-all duration-300 relative z-40 font-mono ${
+      className={`bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 select-none transition-all duration-300 relative z-40 font-mono text-[8px] leading-tight ${
         colapsado ? "w-14" : "w-56"
       }`}
     >
@@ -163,11 +176,11 @@ export default function SidebarUsuario({
           </button>
           {!colapsado && (
             <div className="leading-tight truncate">
-              <span className="font-bold text-[10px] uppercase tracking-wider block text-white">
-                ÁREA DE USUARIO
+              <span className="font-bold text-[8px] leading-tight uppercase tracking-wider block text-white">
+                ÁREA DE USUARIO · AU00
               </span>
-              <span className="text-[8px] text-slate-400 block truncate">
-                Synapse-X OS-AI
+              <span className="text-[8px] leading-tight text-slate-400 block truncate">
+                Synapse-X OS-AI ({tipoUsuario})
               </span>
             </div>
           )}
@@ -176,39 +189,113 @@ export default function SidebarUsuario({
           <button
             type="button"
             onClick={() => setColapsado(true)}
-            className="text-slate-500 hover:text-slate-300 p-1 cursor-pointer"
+            className="text-slate-500 hover:text-slate-300 p-1 cursor-pointer text-[8px] leading-tight"
+            title="Contraer Barra"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
 
-      {/* NAVEGACIÓN DEL ÁREA DE USUARIO */}
-      <div className="p-2 flex-1 overflow-y-auto space-y-1">
+      {/* PARTE SUPERIOR: 4 BOTONES DE ÁREA (SOLO ICONOS) */}
+      <div className="p-1.5 border-b border-slate-800 bg-slate-950/90 space-y-1">
         {!colapsado && (
-          <span className="text-[8px] uppercase tracking-widest text-slate-500 px-1 block mb-1">
+          <span className="text-[8px] leading-tight uppercase tracking-widest text-slate-500 px-1 block">
+            Áreas del Sistema
+          </span>
+        )}
+        <div className={`grid gap-1 ${colapsado ? "grid-cols-1" : "grid-cols-4"}`}>
+          {botonesAreas.map((btn) => {
+            const IconBtn = btn.icon;
+            const esActiva = areaActiva === btn.id;
+            return (
+              <button
+                key={btn.id}
+                type="button"
+                disabled={!btn.habilitado}
+                onClick={() => {
+                  if (!btn.habilitado) return;
+                  onChangeArea(btn.id);
+                  setEstacionActiva(btn.estacion);
+                }}
+                title={btn.habilitado ? btn.label : `${btn.label} (Restringido)`}
+                aria-label={btn.label}
+                className={`h-7 rounded-lg flex items-center justify-center border transition-all text-[8px] leading-tight ${
+                  esActiva
+                    ? `${btn.activoClase} cursor-pointer`
+                    : btn.habilitado
+                    ? `${btn.libreClase} cursor-pointer`
+                    : "bg-slate-950/60 border-slate-900 text-slate-600 opacity-40 cursor-not-allowed"
+                }`}
+              >
+                <IconBtn className="w-3.5 h-3.5 shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* NAVEGACIÓN DEL ÁREA DE USUARIO */}
+      <div className="p-2 flex-1 overflow-y-auto space-y-1 text-[8px] leading-tight">
+        {!colapsado && (
+          <div className="px-1.5 py-1 rounded bg-slate-900/60 border border-slate-800/70 text-[8px] leading-tight text-slate-400">
+            Dashboard principal AU00 conectado. Entorno de trabajo unificado activo.
+          </div>
+        )}
+
+        {/* DASHBOARD PRINCIPAL AU00 */}
+        <button
+          type="button"
+          onClick={() => {
+            onChangeArea("usuario");
+            setEstacionActiva("AU00");
+          }}
+          title="AU00 · Dashboard Principal"
+          className={`w-full flex items-center gap-2 px-2 py-1 rounded-lg text-[8px] leading-tight font-semibold transition-all cursor-pointer text-left ${
+            estacionNormalizada === "AU00"
+              ? "bg-purple-600 text-white shadow-[0_0_12px_rgba(147,51,234,0.3)]"
+              : "bg-slate-900/80 hover:bg-slate-900 border border-slate-800 text-slate-200 hover:text-white"
+          }`}
+        >
+          <Home
+            className={`w-3.5 h-3.5 shrink-0 ${
+              estacionNormalizada === "AU00" ? "text-white" : "text-purple-400"
+            }`}
+          />
+          {!colapsado && <span className="truncate">AU00 · Dashboard Principal</span>}
+        </button>
+
+        {!colapsado && (
+          <span className="text-[8px] leading-tight uppercase tracking-widest text-slate-500 px-1 pt-1 block">
             Roles & Estaciones
           </span>
         )}
 
-        {/* BOTONERA SUPERIOR DE 9 ROLES */}
+        {/* BOTONERA DE 9 ROLES OPERATIVOS */}
         {rolesOperativos.map((item) => {
           const IconComponent = item.icon;
-          const activo = estacionActiva === item.id;
+          const activo = estacionNormalizada === item.id;
           return (
             <button
               key={item.id}
               type="button"
-              onClick={() => setEstacionActiva(item.id)}
-              title={item.label}
-              className={`w-full flex items-center gap-2 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer text-left ${
+              onClick={() => {
+                onChangeArea("usuario");
+                setEstacionActiva(item.id);
+              }}
+              title={`${item.id} · ${item.label}`}
+              className={`w-full flex items-center gap-2 px-2 py-1 rounded-lg text-[8px] leading-tight font-semibold transition-all cursor-pointer text-left ${
                 activo
                   ? "bg-purple-600 text-white shadow-[0_0_12px_rgba(147,51,234,0.3)]"
                   : "bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
               }`}
             >
               <IconComponent className={`w-3.5 h-3.5 shrink-0 ${activo ? "text-white" : item.color}`} />
-              {!colapsado && <span className="truncate">{item.label}</span>}
+              {!colapsado && (
+                <span className="truncate">
+                  {item.id} · {item.label}
+                </span>
+              )}
             </button>
           );
         })}
@@ -216,16 +303,19 @@ export default function SidebarUsuario({
         {/* SEPARADOR HACIA LOS MÓDULOS EXISTENTES */}
         <div className="pt-1.5 mt-1.5 border-t border-slate-800/80 space-y-1">
           {!colapsado && (
-            <span className="text-[8px] uppercase tracking-widest text-slate-500 px-1 block mb-1">
+            <span className="text-[8px] leading-tight uppercase tracking-widest text-slate-500 px-1 block mb-1">
               Módulos Base
             </span>
           )}
 
           <button
             type="button"
-            onClick={() => setEstacionActiva("AU10")}
-            className={`w-full flex items-center gap-2 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer text-left ${
-              estacionActiva === "AU10"
+            onClick={() => {
+              onChangeArea("usuario");
+              setEstacionActiva("AU10");
+            }}
+            className={`w-full flex items-center gap-2 px-2 py-1 rounded-lg text-[8px] leading-tight font-semibold transition-all cursor-pointer text-left ${
+              estacionNormalizada === "AU10"
                 ? "bg-purple-600 text-white shadow-[0_0_12px_rgba(147,51,234,0.3)]"
                 : "bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
             }`}
@@ -236,9 +326,12 @@ export default function SidebarUsuario({
 
           <button
             type="button"
-            onClick={() => setEstacionActiva("AU11")}
-            className={`w-full flex items-center gap-2 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer text-left ${
-              estacionActiva === "AU11"
+            onClick={() => {
+              onChangeArea("usuario");
+              setEstacionActiva("AU11");
+            }}
+            className={`w-full flex items-center gap-2 px-2 py-1 rounded-lg text-[8px] leading-tight font-bold transition-all cursor-pointer text-left ${
+              estacionNormalizada === "AU11"
                 ? "bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.3)]"
                 : "bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
             }`}
@@ -249,45 +342,45 @@ export default function SidebarUsuario({
         </div>
       </div>
 
-      {/* PARTE INFERIOR: BOTONES DE ÁREA SEGÚN PERFIL */}
-      <div className="p-2 border-t border-slate-800 bg-slate-950/80 space-y-1">
-        {!colapsado && (
-          <span className="text-[8px] uppercase tracking-widest text-slate-500 px-1 block mb-1">
-            {esNucleoFamiliar || esTecnicoOIngeniero ? "Cambio de Área" : "Acceso Principal"}
-          </span>
-        )}
+      {/* PARTE INFERIOR: SOLO ICONOS DE TEMA (CLARO / OSCURO / SISTEMA) Y CERRAR SESIÓN */}
+      <div className="p-2 border-t border-slate-800 bg-slate-950/90 space-y-1.5 text-[8px] leading-tight">
+        <div
+          className={`grid gap-1 bg-black/80 p-1 rounded-lg border border-slate-800/90 ${
+            colapsado ? "grid-cols-1" : "grid-cols-3"
+          }`}
+        >
+          {botonesTema.map(({ id, titulo, Icono }) => {
+            const seleccionado = tema === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTema(id)}
+                title={titulo}
+                aria-label={titulo}
+                className={`h-7 rounded-md flex items-center justify-center transition-all cursor-pointer text-[8px] leading-tight ${
+                  seleccionado
+                    ? "bg-purple-500 text-white shadow-sm"
+                    : "text-slate-400 hover:bg-slate-900 hover:text-white"
+                }`}
+              >
+                <Icono className="w-3.5 h-3.5 shrink-0" />
+              </button>
+            );
+          })}
+        </div>
 
-        {botonesAreas.map((btn) => {
-          const IconBtn = btn.icon;
-          const esActiva = areaActiva === btn.id;
-          return (
-            <button
-              key={btn.id}
-              type="button"
-              onClick={() => {
-                onChangeArea(btn.id);
-                setEstacionActiva(btn.estacion);
-              }}
-              className={`w-full flex items-center gap-2 px-2 py-1 rounded-lg text-[10px] transition-all cursor-pointer font-bold border ${
-                btn.clase
-              } ${esActiva ? "ring-1 ring-white/30" : ""}`}
-              title={btn.label}
-            >
-              <IconBtn className="w-3.5 h-3.5 shrink-0" />
-              {!colapsado && <span className="truncate">{btn.label}</span>}
-            </button>
-          );
-        })}
+        <button
+          type="button"
+          onClick={handleCerrarSesion}
+          title="Cerrar sesión"
+          aria-label="Cerrar sesión"
+          className="w-full h-7 flex items-center justify-center gap-1.5 px-2 rounded-lg bg-red-950/50 hover:bg-red-900/70 border border-red-800/60 text-[8px] leading-tight font-bold text-red-300 transition-all cursor-pointer"
+        >
+          <LogOut className="w-3.5 h-3.5 shrink-0" />
+          {!colapsado && <span className="truncate">CERRAR SESIÓN</span>}
+        </button>
       </div>
-
-      {/* BOTONERA INFERIOR UNIFICADA */}
-      {!colapsado && (
-        <BotoneraInferior
-          onCerrarSesion={handleCerrarSesion}
-          acentoColor={acentoColor}
-          onChangeAcento={setAcentoColor}
-        />
-      )}
     </aside>
   );
 }

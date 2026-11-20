@@ -26,6 +26,16 @@ import AreaOperacionesActiva from "./components/AreaOperacionesActiva";
 const ORDEN_PORTALES: PortalTipo[] = ["creador", "ingeniero", "tecnico", "usuario"];
 const CEDULAS_MASTER_FAMILIA = new Set<string>(Object.keys(CREADOR_MASTER_DATABASE));
 
+const CLAVES_LOCAL_SESION = [
+  "synapse_sesion_activa",
+  "synapse_rol_activo",
+  "synapse_cedula_activa",
+  "synapse_nivel_activo",
+  "synapse_area_activa",
+  "synapse_estacion_activa",
+  "synapse_boveda_familiar",
+];
+
 export default function Home() {
   const [sesionLista, setSesionLista] = useState<boolean>(false);
   const [autenticado, setAutenticado] = useState<boolean>(false);
@@ -47,7 +57,9 @@ export default function Home() {
       const cedulaGuardada = localStorage.getItem("synapse_cedula_activa") || "";
       const nivelGuardado = localStorage.getItem("synapse_nivel_activo") || "";
       const areaGuardada = localStorage.getItem("synapse_area_activa") || "creador";
-      const estacionGuardada = localStorage.getItem("synapse_estacion_activa") || "AC01";
+      const estacionGuardada =
+        localStorage.getItem("synapse_estacion_activa") ||
+        (areaGuardada === "usuario" ? "AU00" : "AC01");
       const bovedaGuardada =
         localStorage.getItem("synapse_boveda_familiar") === "true" ||
         CEDULAS_MASTER_FAMILIA.has(cedulaGuardada);
@@ -102,6 +114,7 @@ export default function Home() {
   ) => {
     const cedulaLimpia = String(cedula || "").trim();
     const registroMaster = obtenerCredencialCreadorPorCedula(cedulaLimpia);
+    const nivelMasterTexto = registroMaster?.nivel ? String(registroMaster.nivel) : "";
 
     let perteneceBoveda =
       Boolean(esBovedaFamiliar) ||
@@ -122,9 +135,9 @@ export default function Home() {
     }
 
     let nuevaArea = "usuario";
-    let nuevaEstacion = "AU01";
+    let nuevaEstacion = "AU00";
     let rolFinal = rol;
-    let nivelFinal = nivel || registroMaster?.nivel || "Nivel 1";
+    let nivelFinal = nivel || nivelMasterTexto || "Nivel 1";
 
     if (perteneceBoveda || rol === "creador" || rol === "Creador") {
       nuevaArea = "creador";
@@ -133,14 +146,14 @@ export default function Home() {
         cedulaLimpia === "10433935" || registroMaster?.rol === "creador"
           ? "creador"
           : "superuser";
-      nivelFinal = registroMaster?.nivel || nivelFinal;
+      nivelFinal = nivelMasterTexto || nivelFinal;
       perteneceBoveda = true;
     } else if (rol === "ingeniero" || rol === "tecnico") {
       nuevaArea = "st";
       nuevaEstacion = "ST01";
     } else {
       nuevaArea = "usuario";
-      nuevaEstacion = "AU01";
+      nuevaEstacion = "AU00";
       rolFinal = "usuario";
     }
 
@@ -175,6 +188,7 @@ export default function Home() {
     setAvisoActualizacion("");
     if (typeof window !== "undefined") {
       CLAVES_SESION.forEach((clave) => localStorage.removeItem(clave));
+      CLAVES_LOCAL_SESION.forEach((clave) => localStorage.removeItem(clave));
     }
   };
 
@@ -259,7 +273,9 @@ export default function Home() {
                     handleLoginSuccess(
                       rol,
                       cedula,
-                      reg?.nivel || "Nivel 10 - Acceso Total Absoluto (Super User / Creador)",
+                      reg?.nivel
+                        ? String(reg.nivel)
+                        : "Nivel 10 - Acceso Total Absoluto (Super User / Creador)",
                       true
                     );
                   }}
