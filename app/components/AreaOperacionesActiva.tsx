@@ -75,7 +75,7 @@ export default function AreaOperacionesActiva({
 
   return (
     <div className="flex h-screen bg-[#030712] text-slate-100 font-mono overflow-hidden">
-      {/* Barra sidebar del Creador */}
+      {/* Barra sidebar del Creador con los 4 íconos fijos bajo la marca */}
       {areaActiva === "creador" && (
         <SidebarCreador
           areaActiva={areaActiva}
@@ -85,6 +85,9 @@ export default function AreaOperacionesActiva({
           setEstacionActiva={handleSeleccionEstacionCreador}
           handleCerrarSesion={onCerrarSesion}
           onRefrescarEstado={onRefrescarEstado}
+          esCreadorPrincipal={esCreadorPrincipal}
+          verAreaCodigos={verAreaCodigos}
+          onAbrirAreaCodigos={abrirAreaCodigos}
         />
       )}
 
@@ -115,62 +118,11 @@ export default function AreaOperacionesActiva({
       {/* Contenedor principal de la estación activa */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950/50">
         <header className="h-14 border-b border-slate-800/80 bg-slate-950/80 px-6 flex items-center justify-between shrink-0 gap-4">
-          <div className="flex items-center space-x-3 flex-wrap gap-y-1">
+          <div className="flex items-center space-x-3">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
             <span className="text-xs font-bold tracking-wider text-slate-200">
               ESTACIÓN ACTIVA: <span className="text-cyan-400">{estacionActiva}</span>
             </span>
-
-            {esBovedaFamiliarActiva && (
-              <div className="flex items-center gap-1.5 ml-2">
-                <button
-                  type="button"
-                  onClick={() => navegarArea("creador")}
-                  className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer border ${
-                    areaActiva === "creador" && !verAreaCodigos
-                      ? "bg-emerald-500 text-black border-emerald-400"
-                      : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800"
-                  }`}
-                >
-                  👑 Área Creador
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navegarArea("st")}
-                  className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer border ${
-                    areaActiva === "st"
-                      ? "bg-cyan-500 text-black border-cyan-400"
-                      : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800"
-                  }`}
-                >
-                  🛠️ Área ST
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navegarArea("usuario")}
-                  className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer border ${
-                    areaActiva === "usuario"
-                      ? "bg-pink-500 text-black border-pink-400"
-                      : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800"
-                  }`}
-                >
-                  🏭 Área Usuario
-                </button>
-                {esCreadorPrincipal && (
-                  <button
-                    type="button"
-                    onClick={abrirAreaCodigos}
-                    className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer border ${
-                      verAreaCodigos
-                        ? "bg-amber-400 text-black border-amber-300"
-                        : "bg-slate-900 text-amber-300 border-amber-500/40 hover:bg-slate-800"
-                    }`}
-                  >
-                    🔐 Área Códigos
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="text-xs text-slate-400 flex items-center gap-3">
