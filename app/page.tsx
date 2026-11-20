@@ -18,7 +18,7 @@ import {
 import {
   CREADOR_MASTER_DATABASE,
   obtenerCredencialCreadorPorCedula,
-} from "@/components/AreaCreador/BovedaCreadorMaster";
+} from "./components/AreaCreador/BovedaCreadorMaster";
 import CreadorLogin from "./components/AreaCreador/CreadorLogin";
 import PortalAccesoSimpleLED from "./components/PortalAccesoSimpleLED";
 import AreaOperacionesActiva from "./components/AreaOperacionesActiva";

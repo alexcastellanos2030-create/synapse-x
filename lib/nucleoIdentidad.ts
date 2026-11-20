@@ -12,7 +12,7 @@ import {
   CREADOR_MASTER_DATABASE,
   esClaveValidaCreador,
   obtenerRegistrosMasterDesbloqueados,
-} from "@/components/AreaCreador/BovedaCreadorMaster";
+} from "../app/components/AreaCreador/BovedaCreadorMaster";
 
 export interface RegistroNucleo {
   id: string;
@@ -38,7 +38,7 @@ export const REGISTROS_NUCLEO: RegistroNucleo[] = [
     nombre: CREADOR_MASTER_DATABASE["10433935"].name,
     cedula: CREADOR_MASTER_DATABASE["10433935"].cedula,
     claveMaestra: CREADOR_MASTER_DATABASE["10433935"].passwords[0],
-    clavesRegistradas: CREADOR_MASTER_DATABASE["10433935"].passwords,
+    clavesRegistradas: [...CREADOR_MASTER_DATABASE["10433935"].passwords],
     telefono: CREADOR_MASTER_DATABASE["10433935"].phone,
     nivel: 10,
     rol: "Creador / Superuser",
@@ -52,7 +52,7 @@ export const REGISTROS_NUCLEO: RegistroNucleo[] = [
     nombre: CREADOR_MASTER_DATABASE["279276795"].name,
     cedula: CREADOR_MASTER_DATABASE["279276795"].cedula,
     claveMaestra: CREADOR_MASTER_DATABASE["279276795"].passwords[0],
-    clavesRegistradas: CREADOR_MASTER_DATABASE["279276795"].passwords,
+    clavesRegistradas: [...CREADOR_MASTER_DATABASE["279276795"].passwords],
     telefono: CREADOR_MASTER_DATABASE["279276795"].phone,
     nivel: 1,
     rol: "Superuser",
@@ -66,7 +66,7 @@ export const REGISTROS_NUCLEO: RegistroNucleo[] = [
     nombre: CREADOR_MASTER_DATABASE["33323644"].name,
     cedula: CREADOR_MASTER_DATABASE["33323644"].cedula,
     claveMaestra: CREADOR_MASTER_DATABASE["33323644"].passwords[0],
-    clavesRegistradas: CREADOR_MASTER_DATABASE["33323644"].passwords,
+    clavesRegistradas: [...CREADOR_MASTER_DATABASE["33323644"].passwords],
     telefono: CREADOR_MASTER_DATABASE["33323644"].phone,
     nivel: 1,
     rol: "Superuser",

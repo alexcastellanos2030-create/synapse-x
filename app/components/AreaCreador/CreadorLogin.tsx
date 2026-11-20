@@ -13,7 +13,7 @@ import {
   CREADOR_MASTER_DATABASE,
   CLAVES_CREADOR_AUTORIZADAS,
   CreadorCredential,
-} from '@/components/AreaCreador/BovedaCreadorMaster';
+} from './BovedaCreadorMaster';
 
 interface CreadorLoginProps {
   onLoginSuccess: (

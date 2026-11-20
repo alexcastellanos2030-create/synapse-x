@@ -22,9 +22,13 @@ import {
 import {
   CREADOR_MASTER_DATABASE,
   CLAVES_CREADOR_AUTORIZADAS,
-} from "@/components/AreaCreador/BovedaCreadorMaster";
+} from "./AreaCreador/BovedaCreadorMaster";
 
 type PortalOperativo = Exclude<keyof typeof CONFIG_PORTALES, "creador">;
+
+type OperadorPortalExtendido = OperadorPortal & {
+  esCreadorMaster?: boolean;
+};
 
 interface PortalSimpleLedProps {
   portal: PortalOperativo;
@@ -36,18 +40,20 @@ interface PortalSimpleLedProps {
   ) => void;
 }
 
-const CREADOR_CEDULA_MASTER = CREADOR_MASTER_DATABASE["10433935"]?.cedula || "10433935";
+const CREADOR_CEDULA_MASTER =
+  CREADOR_MASTER_DATABASE["10433935"]?.cedula || "10433935";
 
 function esRegistroDePrueba(nombre?: string): boolean {
   const n = String(nombre || "").toLowerCase().trim();
   return !n || n.includes("prueba") || n.includes("test") || n.includes("demo");
 }
 
-function construirRegistrosDesdeMaster(): OperadorPortal[] {
+function construirRegistrosDesdeMaster(): OperadorPortalExtendido[] {
   return Object.values(CREADOR_MASTER_DATABASE)
     .filter((item) => !esRegistroDePrueba(item.name))
     .map((item) => {
-      const esCreador = item.cedula === CREADOR_CEDULA_MASTER || item.nivelNumerico === 10;
+      const esCreador =
+        item.cedula === CREADOR_CEDULA_MASTER || item.nivelNumerico === 10;
       return {
         cedula: item.cedula,
         nombre: item.name,
@@ -55,9 +61,12 @@ function construirRegistrosDesdeMaster(): OperadorPortal[] {
         nivel: esCreador
           ? "Nivel 10 - Creador"
           : `Nivel ${item.nivelNumerico || 1} - Superuser`,
-        cargoEspecifico: esCreador ? "Creador / Superuser" : "Superuser (Núcleo Familiar)",
-        rolAsignado: esCreador ? "creador" : "usuario",
+        cargoEspecifico: esCreador
+          ? "Creador / Superuser"
+          : "Superuser (Núcleo Familiar)",
+        rolAsignado: "usuario",
         esBovedaFamiliar: true,
+        esCreadorMaster: esCreador,
       };
     });
 }
@@ -72,8 +81,10 @@ export default function PortalAccesoSimpleLED({
   const [cedula, setCedula] = useState("");
   const [nombreVerificado, setNombreVerificado] = useState("");
   const [clave, setClave] = useState("");
-  const [usuarioEncontrado, setUsuarioEncontrado] = useState<OperadorPortal | null>(null);
-  const [listaCompleta, setListaCompleta] = useState<OperadorPortal[]>(baseMaster);
+  const [usuarioEncontrado, setUsuarioEncontrado] =
+    useState<OperadorPortalExtendido | null>(null);
+  const [listaCompleta, setListaCompleta] =
+    useState<OperadorPortalExtendido[]>(baseMaster);
 
   const [led1, setLed1] = useState<LedEstado>("white");
   const [led2, setLed2] = useState<LedEstado>("white");
@@ -92,15 +103,16 @@ export default function PortalAccesoSimpleLED({
     setPaso1Ok(false);
     setMensaje("Paso 1: Ingrese su número de cédula.");
 
-    const mapa = new Map<string, OperadorPortal>();
+    const mapa = new Map<string, OperadorPortalExtendido>();
     baseMaster.forEach((u) => mapa.set(u.cedula, u));
 
-    // Incorpora únicamente registros reales no marcados como prueba
-    CATALOGO_USUARIOS_RESPALDO.filter((u) => !esRegistroDePrueba(u.nombre)).forEach((u) => {
-      if (!mapa.has(u.cedula)) {
-        mapa.set(u.cedula, u);
+    CATALOGO_USUARIOS_RESPALDO.filter((u) => !esRegistroDePrueba(u.nombre)).forEach(
+      (u) => {
+        if (!mapa.has(u.cedula)) {
+          mapa.set(u.cedula, u);
+        }
       }
-    });
+    );
 
     setListaCompleta(Array.from(mapa.values()));
 
@@ -115,19 +127,25 @@ export default function PortalAccesoSimpleLED({
             const nom = String(row.nombre || "").trim();
             if (!ced || esRegistroDePrueba(nom)) return;
 
-            const esCreador = ced === CREADOR_CEDULA_MASTER || Number(row.nivel) === 10;
+            const esCreador =
+              ced === CREADOR_CEDULA_MASTER || Number(row.nivel) === 10;
             const prev = mapa.get(ced);
 
             mapa.set(ced, {
               cedula: ced,
               nombre: nom || prev?.nombre || "",
-              clave: String(row.claveMaestra || row.clave_maestra || prev?.clave || "").trim(),
+              clave: String(
+                row.claveMaestra || row.clave_maestra || prev?.clave || ""
+              ).trim(),
               nivel: esCreador
                 ? "Nivel 10 - Creador"
                 : `Nivel ${Math.min(Math.max(Number(row.nivel) || 1, 1), 9)} - Superuser`,
-              cargoEspecifico: esCreador ? "Creador / Superuser" : "Superuser (Núcleo Familiar)",
-              rolAsignado: esCreador ? "creador" : "usuario",
+              cargoEspecifico: esCreador
+                ? "Creador / Superuser"
+                : "Superuser (Núcleo Familiar)",
+              rolAsignado: prev?.rolAsignado || "usuario",
               esBovedaFamiliar: true,
+              esCreadorMaster: esCreador,
             });
           });
         }
@@ -135,7 +153,11 @@ export default function PortalAccesoSimpleLED({
         const { data: usuariosData, error: usuariosError } = await supabase
           .from("usuarios_sistema")
           .select("*");
-        if (!usuariosError && Array.isArray(usuariosData) && usuariosData.length > 0) {
+        if (
+          !usuariosError &&
+          Array.isArray(usuariosData) &&
+          usuariosData.length > 0
+        ) {
           usuariosData.forEach((row: any) => {
             const ced = String(row.cedula || "").trim();
             const nom = String(row.nombre || "").trim();
@@ -199,7 +221,8 @@ export default function PortalAccesoSimpleLED({
     setMensaje("Paso 1: Verificando cédula...");
 
     const encontrado = listaCompleta.find((u) => u.cedula === limpio);
-    const esCreador = limpio === CREADOR_CEDULA_MASTER || encontrado?.rolAsignado === "creador";
+    const esCreador =
+      limpio === CREADOR_CEDULA_MASTER || Boolean(encontrado?.esCreadorMaster);
     const esBoveda = Boolean(encontrado?.esBovedaFamiliar) || esCreador;
 
     if (encontrado && (esBoveda || encontrado.rolAsignado === portal)) {
@@ -208,7 +231,9 @@ export default function PortalAccesoSimpleLED({
       setNombreVerificado(encontrado.nombre);
       setUsuarioEncontrado({ ...encontrado, esBovedaFamiliar: esBoveda });
       setPaso1Ok(true);
-      setMensaje(`Paso 1 y 2 OK: ${encontrado.nombre}. Ingrese su clave en el Paso 3.`);
+      setMensaje(
+        `Paso 1 y 2 OK: ${encontrado.nombre}. Ingrese su clave en el Paso 3.`
+      );
     } else if (encontrado && encontrado.rolAsignado !== portal) {
       setLed1("red");
       setLed2("white");
@@ -236,7 +261,9 @@ export default function PortalAccesoSimpleLED({
 
   const handleClave = (valor: string) => {
     if (!paso1Ok || !usuarioEncontrado) {
-      setMensaje("Complete primero el Paso 1 con una cédula válida para este portal.");
+      setMensaje(
+        "Complete primero el Paso 1 con una cédula válida para este portal."
+      );
       return;
     }
 
@@ -274,8 +301,11 @@ export default function PortalAccesoSimpleLED({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!puedeEntrar || !usuarioEncontrado) return;
+    const rolSalida = usuarioEncontrado.esCreadorMaster
+      ? "creador"
+      : usuarioEncontrado.rolAsignado;
     onLoginSuccess(
-      usuarioEncontrado.rolAsignado,
+      rolSalida,
       usuarioEncontrado.cedula,
       usuarioEncontrado.nivel,
       usuarioEncontrado.esBovedaFamiliar
@@ -285,7 +315,9 @@ export default function PortalAccesoSimpleLED({
   return (
     <div className="w-full max-w-2xl bg-[#070d1a] border border-slate-800 rounded-2xl p-6 shadow-2xl relative font-mono text-slate-100">
       <div className="mb-4 pb-3 border-b border-slate-800 flex items-center justify-between bg-black/60 px-4 py-2.5 rounded-xl">
-        <span className={`text-[11px] font-bold uppercase tracking-widest ${configPortal.ledBarText}`}>
+        <span
+          className={`text-[11px] font-bold uppercase tracking-widest ${configPortal.ledBarText}`}
+        >
           ESTADO LED:
         </span>
         <div className="flex items-center space-x-4">
@@ -379,7 +411,9 @@ export default function PortalAccesoSimpleLED({
                 : "bg-slate-800 text-slate-500 cursor-not-allowed opacity-60"
             }`}
           >
-            {puedeEntrar ? "🔓 Candado Abierto - Entrar" : "🔒 Ingrese Cédula y Clave"}
+            {puedeEntrar
+              ? "🔓 Candado Abierto - Entrar"
+              : "🔒 Ingrese Cédula y Clave"}
           </button>
         </div>
       </form>
