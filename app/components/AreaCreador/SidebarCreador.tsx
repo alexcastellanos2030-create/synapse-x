@@ -1,8 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+// ============================================================================
+// BARRA LATERAL DEL CREADOR — SYNAPSE-X OS (OSAI INDUSTRIAL)
+// - Jerarquía: Nivel 10 exclusivo del Creador; hijas (Aleanny y Albany) como
+//   Superusers en escala progresiva (Nivel 1 -> Nivel 9) por encima de
+//   ingenieros y operadores.
+// ============================================================================
+
+import React, { useState, useEffect } from "react";
 
 type AreaNavegacion = "usuario" | "superuser" | "creador" | "st";
+export type ModoPantallaSidebar = "claro" | "oscuro" | "sistema";
 
 interface SidebarCreadorProps {
   areaActiva: string;
@@ -12,10 +20,14 @@ interface SidebarCreadorProps {
   setEstacionActiva: (estacion: string) => void;
   handleCerrarSesion: () => void;
   onRefrescarEstado?: () => void;
+  onActualizarBoveda?: () => void;
+  onChangeModoPantalla?: (modo: ModoPantallaSidebar) => void;
   esCreadorPrincipal?: boolean;
   verAreaCodigos?: boolean;
   onAbrirAreaCodigos?: () => void;
 }
+
+const MODO_PANTALLA_KEY = "synapse_modo_pantalla_v1";
 
 export default function SidebarCreador({
   areaActiva,
@@ -24,12 +36,15 @@ export default function SidebarCreador({
   setEstacionActiva,
   handleCerrarSesion,
   onRefrescarEstado,
+  onActualizarBoveda,
+  onChangeModoPantalla,
   esCreadorPrincipal = true,
   verAreaCodigos = false,
   onAbrirAreaCodigos,
 }: SidebarCreadorProps) {
   const [colapsada, setColapsada] = useState<boolean>(false);
-  const [modoPantalla, setModoPantalla] = useState<"claro" | "oscuro" | "sistema">("oscuro");
+  const [modoPantalla, setModoPantalla] = useState<ModoPantallaSidebar>("oscuro");
+  const [ocupadoAccion, setOcupadoAccion] = useState<boolean>(false);
 
   const portalesCreador = [
     { id: "AC00", label: "AC00 — Portada Maestra", icon: "🏠" },
@@ -42,12 +57,58 @@ export default function SidebarCreador({
     { id: "AC07", label: "AC07 — Enlaces Maestros", icon: "🔗" },
   ];
 
-  const handleActualizar = () => {
-    if (onRefrescarEstado) {
-      onRefrescarEstado();
-    } else if (typeof window !== "undefined") {
-      window.location.reload();
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const guardado = localStorage.getItem(MODO_PANTALLA_KEY) as ModoPantallaSidebar | null;
+    if (guardado && ["claro", "oscuro", "sistema"].includes(guardado)) {
+      setModoPantalla(guardado);
+      document.documentElement.setAttribute("data-synapse-theme", guardado);
+      onChangeModoPantalla?.(guardado);
     }
+  }, [onChangeModoPantalla]);
+
+  const seleccionarModoPantalla = (modo: ModoPantallaSidebar) => {
+    setModoPantalla(modo);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(MODO_PANTALLA_KEY, modo);
+      document.documentElement.setAttribute("data-synapse-theme", modo);
+    }
+    onChangeModoPantalla?.(modo);
+  };
+
+  const ejecutarConPausaCorta = (accion: () => void | Promise<void>) => {
+    if (ocupadoAccion) return;
+    setOcupadoAccion(true);
+    Promise.resolve()
+      .then(() => accion())
+      .finally(() => {
+        setTimeout(() => setOcupadoAccion(false), 400);
+      });
+  };
+
+  const handleRefrescarVista = () => {
+    ejecutarConPausaCorta(() => {
+      onRefrescarEstado?.();
+    });
+  };
+
+  const handleRecargarBoveda = () => {
+    ejecutarConPausaCorta(() => {
+      if (onActualizarBoveda) {
+        onActualizarBoveda();
+      } else {
+        onRefrescarEstado?.();
+      }
+    });
+  };
+
+  const handleActualizarSistema = () => {
+    ejecutarConPausaCorta(() => {
+      onRefrescarEstado?.();
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
+    });
   };
 
   if (colapsada) {
@@ -136,7 +197,7 @@ export default function SidebarCreador({
       {/* BARRA DE ICONOS PUROS FIJA DEBAJO DE LA MARCA */}
       <div
         className={`grid ${
-          esCreadorPrincipal ? "grid-cols-4" : "grid-cols-3"
+          esCreadorPrincipal && onAbrirAreaCodigos ? "grid-cols-4" : "grid-cols-3"
         } gap-1.5 p-2 bg-black/60 border-b border-amber-500/20 shrink-0`}
       >
         <button
@@ -223,12 +284,31 @@ export default function SidebarCreador({
         })}
       </div>
 
-      {/* SECCIÓN INFERIOR: ACTUALIZAR SISTEMA Y SOLO ICONOS DE PANTALLA */}
-      <div className="p-2.5 border-t border-amber-500/20 bg-black/80 space-y-2 shrink-0">
+      {/* SECCIÓN INFERIOR: BOTONERA DE REFRESCO/ACTUALIZACIÓN IDENTIFICADA + PANTALLA */}
+      <div className="p-2.5 border-t border-amber-500/20 bg-black/80 space-y-1.5 shrink-0">
         <button
           type="button"
-          onClick={handleActualizar}
-          className="w-full py-1.5 bg-amber-500 text-black font-bold text-xs uppercase rounded hover:bg-amber-400 transition-all shadow-md text-center cursor-pointer"
+          disabled={ocupadoAccion}
+          onClick={handleRefrescarVista}
+          className="w-full py-1.5 bg-cyan-500 text-black font-bold text-[11px] uppercase rounded hover:bg-cyan-400 disabled:opacity-50 transition-all shadow-md text-center cursor-pointer"
+        >
+          Refrescar Vista
+        </button>
+
+        <button
+          type="button"
+          disabled={ocupadoAccion}
+          onClick={handleRecargarBoveda}
+          className="w-full py-1.5 bg-emerald-500 text-black font-bold text-[11px] uppercase rounded hover:bg-emerald-400 disabled:opacity-50 transition-all shadow-md text-center cursor-pointer"
+        >
+          Actualizar Bóveda
+        </button>
+
+        <button
+          type="button"
+          disabled={ocupadoAccion}
+          onClick={handleActualizarSistema}
+          className="w-full py-1.5 bg-amber-500 text-black font-bold text-[11px] uppercase rounded hover:bg-amber-400 disabled:opacity-50 transition-all shadow-md text-center cursor-pointer"
         >
           Actualizar Sistema
         </button>
@@ -237,7 +317,7 @@ export default function SidebarCreador({
         <div className="flex items-center justify-around bg-slate-900/70 py-1.5 px-2 rounded border border-slate-800">
           <button
             type="button"
-            onClick={() => setModoPantalla("claro")}
+            onClick={() => seleccionarModoPantalla("claro")}
             aria-label="Modo Claro"
             className={`px-2.5 py-1 rounded text-sm transition-colors cursor-pointer ${
               modoPantalla === "claro"
@@ -249,7 +329,7 @@ export default function SidebarCreador({
           </button>
           <button
             type="button"
-            onClick={() => setModoPantalla("oscuro")}
+            onClick={() => seleccionarModoPantalla("oscuro")}
             aria-label="Modo Oscuro"
             className={`px-2.5 py-1 rounded text-sm transition-colors cursor-pointer ${
               modoPantalla === "oscuro"
@@ -261,7 +341,7 @@ export default function SidebarCreador({
           </button>
           <button
             type="button"
-            onClick={() => setModoPantalla("sistema")}
+            onClick={() => seleccionarModoPantalla("sistema")}
             aria-label="Modo Sistema"
             className={`px-2.5 py-1 rounded text-sm transition-colors cursor-pointer ${
               modoPantalla === "sistema"

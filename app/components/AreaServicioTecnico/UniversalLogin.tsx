@@ -1,6 +1,20 @@
 'use client';
 
+// ============================================================================
+// PORTAL UNIVERSAL DE ACCESO — SYNAPSE-X OS (OSAI INDUSTRIAL)
+// - Sin usuarios ficticios ni claves de prueba.
+// - Toma los registros del núcleo desde BovedaCreadorMaster.tsx.
+// - Jerarquía: Nivel 10 exclusivo del Creador (10433935); hijas (Aleanny y
+//   Albany) como Superusers en escala progresiva (Nivel 1 -> Nivel 9) por
+//   encima de ingenieros, técnicos y operadores.
+// ============================================================================
+
 import React, { useState } from 'react';
+import {
+  CREADOR_MASTER_DATABASE,
+  CLAVES_CREADOR_AUTORIZADAS,
+  CreadorCredential,
+} from '@/components/AreaCreador/BovedaCreadorMaster';
 
 interface UniversalLoginProps {
   tituloPortal: string;
@@ -8,54 +22,53 @@ interface UniversalLoginProps {
   onLoginSuccess: (rol: string, cedula: string, nivel: string) => void;
 }
 
-// Base de datos integrada de usuarios autorizados en Synapse-X OS
-const usuariosGlobalesBD = [
-  {
-    cedula: "12345678",
-    name: "Alexander Segundo Castellanos Perozo",
-    cargo: "Creador / Jefe de Taller",
-    nivel: "10",
-    rol: "creador",
-    passwords: ["synapse2026", "root9999", "admin2026"]
-  },
-  {
-    cedula: "279276795",
-    name: "Aleanny Castellanos",
-    cargo: "Super User / Ingeniera",
-    nivel: "8",
-    rol: "ingeniero",
-    passwords: ["*Aleanny123", "synapse2026"]
-  },
-  {
-    cedula: "10433935",
-    name: "Técnico Autorizado",
-    cargo: "Maestro Técnico / Soporte",
-    nivel: "5",
-    rol: "tecnico",
-    passwords: ["tecnico2026", "synapse2026"]
-  },
-  {
-    cedula: "11111111",
-    name: "Operador de Planta",
-    cargo: "Operador de Producción",
-    nivel: "2",
-    rol: "usuario",
-    passwords: ["operador2026", "synapse2026"]
-  }
-];
-
-// Función de búsqueda local integrada (sin archivos externos)
-function buscarUsuarioGlobalLocal(cedula: string) {
-  return usuariosGlobalesBD.find(u => u.cedula.trim() === cedula.trim());
+interface UsuarioAutorizadoUniversal {
+  cedula: string;
+  name: string;
+  cargo: string;
+  nivel: string;
+  nivelNumerico: number;
+  rol: "creador" | "ingeniero" | "tecnico" | "usuario";
+  passwords: string[];
 }
 
-export default function UniversalLogin({ tituloPortal, tipoPortalPermitido, onLoginSuccess }: UniversalLoginProps) {
+const CREADOR_CEDULA_MASTER = CREADOR_MASTER_DATABASE["10433935"]?.cedula || "10433935";
+
+// Construye los registros autorizados desde la bóveda maestra del Creador (sin datos de prueba)
+const usuariosGlobalesBD: UsuarioAutorizadoUniversal[] = Object.values(
+  CREADOR_MASTER_DATABASE
+).map((item: CreadorCredential) => {
+  const esCreador = item.cedula === CREADOR_CEDULA_MASTER || item.nivelNumerico === 10;
+  const claves = esCreador
+    ? Array.from(new Set([...item.passwords, ...CLAVES_CREADOR_AUTORIZADAS]))
+    : [...item.passwords];
+
+  return {
+    cedula: item.cedula,
+    name: item.name,
+    cargo: esCreador ? "Creador / Superuser" : "Superuser (Núcleo Familiar)",
+    nivel: esCreador ? "10" : String(item.nivelNumerico || 1),
+    nivelNumerico: esCreador ? 10 : item.nivelNumerico || 1,
+    rol: esCreador ? "creador" : "usuario",
+    passwords: claves,
+  };
+});
+
+function buscarUsuarioGlobalLocal(cedula: string) {
+  return usuariosGlobalesBD.find((u) => u.cedula.trim() === cedula.trim());
+}
+
+export default function UniversalLogin({
+  tituloPortal,
+  tipoPortalPermitido,
+  onLoginSuccess,
+}: UniversalLoginProps) {
   const [cedula, setCedula] = useState<string>('');
   const [name, setName] = useState<string>('');
   const [cargo, setCargo] = useState<string>('');
   const [nivel, setNivel] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  
+
   const [intentosFallidos, setIntentosFallidos] = useState<number>(0);
   const [estaBloqueado, setEstaBloqueado] = useState<boolean>(false);
 
@@ -65,10 +78,27 @@ export default function UniversalLogin({ tituloPortal, tipoPortalPermitido, onLo
   const [bombillo3, setBombillo3] = useState<'white' | 'yellow' | 'green' | 'red'>('white'); // 3: Clave
   const [bombillo4, setBombillo4] = useState<'white' | 'yellow' | 'green' | 'red'>('white'); // 4: Acceso / Candado
 
-  const [alertMsg, setAlertMsg] = useState<string>('Ruta Paso 1: Ingrese su número de cédula para iniciar secuencia.');
+  const [alertMsg, setAlertMsg] = useState<string>(
+    'Ruta Paso 1: Ingrese su número de cédula para iniciar secuencia.'
+  );
   const [isStep1Valid, setIsStep1Valid] = useState<boolean>(false);
   const [isFullyAuthorized, setIsFullyAuthorized] = useState<boolean>(false);
-  const [usuarioDetectado, setUsuarioDetectado] = useState<any>(null);
+  const [usuarioDetectado, setUsuarioDetectado] = useState<UsuarioAutorizadoUniversal | null>(
+    null
+  );
+
+  const resetSteps = () => {
+    setIsStep1Valid(false);
+    setIsFullyAuthorized(false);
+    setName('');
+    setCargo('');
+    setNivel('');
+    setPassword('');
+    setUsuarioDetectado(null);
+    setBombillo2('white');
+    setBombillo3('white');
+    setBombillo4('white');
+  };
 
   const handleCedulaChange = (val: string) => {
     if (estaBloqueado) return;
@@ -89,20 +119,25 @@ export default function UniversalLogin({ tituloPortal, tipoPortalPermitido, onLo
     }
 
     setBombillo1('yellow');
-    setAlertMsg('Ruta Paso 1: Buscando registro en base de datos...');
+    setAlertMsg('Ruta Paso 1: Buscando registro en bóveda...');
 
     const userRecord = buscarUsuarioGlobalLocal(val);
 
     if (userRecord) {
       setUsuarioDetectado(userRecord);
 
-      // Si es Creador (Nivel 10) entra por cualquier portal.
-      const esCreadorUniversal = userRecord.rol === "creador";
+      // Solo el Creador (Nivel 10) tiene acceso universal a todos los portales
+      const esCreadorUniversal =
+        userRecord.rol === "creador" ||
+        userRecord.cedula === CREADOR_CEDULA_MASTER ||
+        userRecord.nivelNumerico === 10;
 
       if (!esCreadorUniversal && userRecord.rol !== tipoPortalPermitido) {
         setBombillo1('red');
         setBombillo2('red');
-        setAlertMsg(`ACCESO DENEGADO: Su cédula pertenece a "${userRecord.rol}". Debe ingresar por su portal correspondiente.`);
+        setAlertMsg(
+          `ACCESO DENEGADO: Su cédula corresponde a "${userRecord.cargo}". Debe ingresar por su portal habilitado.`
+        );
         resetSteps();
         return;
       }
@@ -113,7 +148,9 @@ export default function UniversalLogin({ tituloPortal, tipoPortalPermitido, onLo
       setCargo(userRecord.cargo);
       setNivel(userRecord.nivel);
       setIsStep1Valid(true);
-      setAlertMsg(`Ruta Paso 1 y 2 OK: Identidad verificada (${userRecord.name}). Ingrese su clave.`);
+      setAlertMsg(
+        `Ruta Paso 1 y 2 OK: Identidad verificada (${userRecord.name} • Nivel ${userRecord.nivel}). Ingrese su clave.`
+      );
     } else {
       if (val.length >= 7) {
         setBombillo1('red');
@@ -124,19 +161,6 @@ export default function UniversalLogin({ tituloPortal, tipoPortalPermitido, onLo
         resetSteps();
       }
     }
-  };
-
-  const resetSteps = () => {
-    setIsStep1Valid(false);
-    setIsFullyAuthorized(false);
-    setName('');
-    setCargo('');
-    setNivel('');
-    setPassword('');
-    setUsuarioDetectado(null);
-    setBombillo2('white');
-    setBombillo3('white');
-    setBombillo4('white');
   };
 
   const handlePasswordChange = (val: string) => {
@@ -154,7 +178,7 @@ export default function UniversalLogin({ tituloPortal, tipoPortalPermitido, onLo
     setBombillo3('yellow');
     setAlertMsg('Ruta Paso 3: Validando clave...');
 
-    const isValidPass = usuarioDetectado.passwords.includes(val);
+    const isValidPass = usuarioDetectado.passwords.includes(val.trim());
 
     if (isValidPass) {
       setBombillo3('green');
@@ -172,12 +196,16 @@ export default function UniversalLogin({ tituloPortal, tipoPortalPermitido, onLo
         setBombillo2('red');
         setBombillo3('red');
         setBombillo4('red');
-        setAlertMsg('⛔ SISTEMA BLOQUEADO: 5 intentos fallidos. Solo el Creador puede desbloquear este usuario.');
+        setAlertMsg(
+          '⛔ SISTEMA BLOQUEADO: 5 intentos fallidos. Solo el Creador puede desbloquear este usuario.'
+        );
       } else {
         setBombillo3('red');
         setBombillo4('white');
         setIsFullyAuthorized(false);
-        setAlertMsg(`ALERTA: Clave incorrecta. Intentos fallidos: ${nuevosIntentos}/5 antes del bloqueo.`);
+        setAlertMsg(
+          `ALERTA: Clave incorrecta. Intentos fallidos: ${nuevosIntentos}/5 antes del bloqueo.`
+        );
       }
     }
   };
@@ -193,10 +221,14 @@ export default function UniversalLogin({ tituloPortal, tipoPortalPermitido, onLo
 
   const getLedColorClass = (color: 'white' | 'yellow' | 'green' | 'red') => {
     switch (color) {
-      case 'green': return 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)] border-emerald-200';
-      case 'yellow': return 'bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.9)] border-amber-200';
-      case 'red': return 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)] border-red-200';
-      default: return 'bg-slate-700 shadow-none border-slate-600';
+      case 'green':
+        return 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)] border-emerald-200';
+      case 'yellow':
+        return 'bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.9)] border-amber-200';
+      case 'red':
+        return 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)] border-red-200';
+      default:
+        return 'bg-slate-700 shadow-none border-slate-600';
     }
   };
 
@@ -206,81 +238,99 @@ export default function UniversalLogin({ tituloPortal, tipoPortalPermitido, onLo
         <h1 className="text-sm font-bold tracking-widest text-cyan-300 uppercase animate-pulse">
           ⚡ {tituloPortal} ⚡
         </h1>
-        <p className="text-[11px] text-cyan-400/70 mt-1">SYNAPSE-X OS // Guía de Ruta y Seguridad</p>
+        <p className="text-[11px] text-cyan-400/70 mt-1">
+          SYNAPSE-X OS // Guía de Ruta y Seguridad
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
         <div>
-          <label className="block text-cyan-300/80 mb-1 uppercase tracking-wider">1. Ingrese aquí su número de cédula:</label>
-          <input 
-            type="text" 
-            value={cedula} 
-            onChange={(e) => handleCedulaChange(e.target.value)} 
-            placeholder="Ej: 12345678" 
+          <label className="block text-cyan-300/80 mb-1 uppercase tracking-wider">
+            1. Ingrese aquí su número de cédula:
+          </label>
+          <input
+            type="text"
+            value={cedula}
+            onChange={(e) => handleCedulaChange(e.target.value)}
+            placeholder="Ingrese su cédula..."
             disabled={estaBloqueado}
-            required 
-            className="w-full bg-[#030712] border rounded px-3 py-2 text-cyan-100 border-cyan-900 focus:border-cyan-400 outline-none disabled:opacity-50" 
+            required
+            className="w-full bg-[#030712] border rounded px-3 py-2 text-cyan-100 border-cyan-900 focus:border-cyan-400 outline-none disabled:opacity-50"
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="block text-cyan-300/80 mb-1 uppercase tracking-wider">Nombre Completo:</label>
-            <input 
-              type="text" 
-              value={name} 
-              readOnly 
-              placeholder="Auto-relleno por sistema..." 
-              className="w-full bg-[#030712]/60 border border-cyan-900/60 rounded px-3 py-2 text-cyan-300 font-semibold cursor-not-allowed" 
+            <label className="block text-cyan-300/80 mb-1 uppercase tracking-wider">
+              Nombre Completo:
+            </label>
+            <input
+              type="text"
+              value={name}
+              readOnly
+              placeholder="Auto-relleno por sistema..."
+              className="w-full bg-[#030712]/60 border border-cyan-900/60 rounded px-3 py-2 text-cyan-300 font-semibold cursor-not-allowed"
             />
           </div>
           <div>
-            <label className="block text-cyan-300/80 mb-1 uppercase tracking-wider">Cargo:</label>
-            <input 
-              type="text" 
-              value={cargo} 
-              readOnly 
-              placeholder="Cargo asignado..." 
-              className="w-full bg-[#030712]/60 border border-cyan-900/60 rounded px-3 py-2 text-cyan-300 font-semibold cursor-not-allowed" 
+            <label className="block text-cyan-300/80 mb-1 uppercase tracking-wider">
+              Cargo:
+            </label>
+            <input
+              type="text"
+              value={cargo}
+              readOnly
+              placeholder="Cargo asignado..."
+              className="w-full bg-[#030712]/60 border border-cyan-900/60 rounded px-3 py-2 text-cyan-300 font-semibold cursor-not-allowed"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-cyan-300/80 mb-1 uppercase tracking-wider">Nivel de Autorización:</label>
-          <input 
-            type="text" 
-            value={nivel} 
-            readOnly 
-            placeholder="Nivel..." 
-            className="w-full bg-[#030712]/60 border border-cyan-900/60 rounded px-3 py-2 text-amber-400 font-semibold cursor-not-allowed" 
+          <label className="block text-cyan-300/80 mb-1 uppercase tracking-wider">
+            Nivel de Autorización:
+          </label>
+          <input
+            type="text"
+            value={nivel}
+            readOnly
+            placeholder="Nivel..."
+            className="w-full bg-[#030712]/60 border border-cyan-900/60 rounded px-3 py-2 text-amber-400 font-semibold cursor-not-allowed"
           />
         </div>
 
         <div className="pt-2 border-t border-cyan-900/50">
-          <label className="block text-cyan-300 uppercase tracking-wider font-semibold mb-2">3. Ingrese su clave secreta:</label>
-          <input 
-            type="password" 
-            value={password} 
-            onChange={(e) => handlePasswordChange(e.target.value)} 
-            disabled={!isStep1Valid || estaBloqueado} 
-            placeholder={isStep1Valid ? "Edite su clave aquí..." : "Bloqueado hasta ingresar cédula válida"} 
-            required 
-            className="w-full bg-[#030712] border rounded px-3 py-2 text-cyan-100 border-cyan-900 disabled:opacity-50 disabled:cursor-not-allowed" 
+          <label className="block text-cyan-300 uppercase tracking-wider font-semibold mb-2">
+            3. Ingrese su clave secreta:
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => handlePasswordChange(e.target.value)}
+            disabled={!isStep1Valid || estaBloqueado}
+            placeholder={
+              isStep1Valid ? "Edite su clave aquí..." : "Bloqueado hasta ingresar cédula válida"
+            }
+            required
+            className="w-full bg-[#030712] border rounded px-3 py-2 text-cyan-100 border-cyan-900 disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
 
         <div className="pt-3 flex justify-center">
-          <button 
-            type="submit" 
-            disabled={!isFullyAuthorized || estaBloqueado} 
+          <button
+            type="submit"
+            disabled={!isFullyAuthorized || estaBloqueado}
             className={`font-bold w-full py-3 rounded text-xs uppercase tracking-widest transition-all ${
               isFullyAuthorized && !estaBloqueado
-                ? 'bg-cyan-400 text-black cursor-pointer animate-pulse shadow-lg shadow-cyan-400/40' 
+                ? 'bg-cyan-400 text-black cursor-pointer animate-pulse shadow-lg shadow-cyan-400/40'
                 : 'bg-[#0d1626] text-cyan-700 cursor-not-allowed opacity-60'
             }`}
           >
-            {estaBloqueado ? '⛔ USUARIO BLOQUEADO' : isFullyAuthorized ? '🔓 Candado Abierto - Entrar al Sistema' : '🔒 Ingrese Cédula y Clave para Abrir'}
+            {estaBloqueado
+              ? '⛔ USUARIO BLOQUEADO'
+              : isFullyAuthorized
+              ? '🔓 Candado Abierto - Entrar al Sistema'
+              : '🔒 Ingrese Cédula y Clave para Abrir'}
           </button>
         </div>
       </form>
@@ -288,22 +338,38 @@ export default function UniversalLogin({ tituloPortal, tipoPortalPermitido, onLo
       {/* LOS 4 BOMBILLOS LED FÍSICOS INDEPENDIENTES */}
       <div className="mt-5 pt-3 border-t border-cyan-900/40 flex justify-between items-center px-4 bg-black/40 py-3 rounded-xl">
         <div className="flex flex-col items-center gap-1.5">
-          <div className={`w-5 h-5 rounded-full border-2 transition-all duration-300 ${getLedColorClass(bombillo1)}`} />
+          <div
+            className={`w-5 h-5 rounded-full border-2 transition-all duration-300 ${getLedColorClass(
+              bombillo1
+            )}`}
+          />
           <span className="text-[10px] font-bold text-cyan-300">1. Cédula</span>
         </div>
 
         <div className="flex flex-col items-center gap-1.5">
-          <div className={`w-5 h-5 rounded-full border-2 transition-all duration-300 ${getLedColorClass(bombillo2)}`} />
+          <div
+            className={`w-5 h-5 rounded-full border-2 transition-all duration-300 ${getLedColorClass(
+              bombillo2
+            )}`}
+          />
           <span className="text-[10px] font-bold text-cyan-300">2. Identidad</span>
         </div>
 
         <div className="flex flex-col items-center gap-1.5">
-          <div className={`w-5 h-5 rounded-full border-2 transition-all duration-300 ${getLedColorClass(bombillo3)}`} />
+          <div
+            className={`w-5 h-5 rounded-full border-2 transition-all duration-300 ${getLedColorClass(
+              bombillo3
+            )}`}
+          />
           <span className="text-[10px] font-bold text-cyan-300">3. Clave</span>
         </div>
 
         <div className="flex flex-col items-center gap-1.5">
-          <div className={`w-5 h-5 rounded-full border-2 transition-all duration-300 ${getLedColorClass(bombillo4)}`} />
+          <div
+            className={`w-5 h-5 rounded-full border-2 transition-all duration-300 ${getLedColorClass(
+              bombillo4
+            )}`}
+          />
           <span className="text-[10px] font-bold text-cyan-300">4. Acceso</span>
         </div>
       </div>

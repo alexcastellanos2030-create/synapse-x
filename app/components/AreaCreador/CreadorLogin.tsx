@@ -1,7 +1,19 @@
 'use client';
 
+// ============================================================================
+// PORTAL DE ACCESO — BÓVEDA FAMILIAR Y CREADOR (SYNAPSE-X OS)
+// - Consume datos y claves desde BovedaCreadorMaster.tsx y Supabase.
+// - Nivel 10 exclusivo del Creador (Alexander Segundo Castellanos Perozo).
+// - Hijas (Aleanny y Albany) como Superusers en escala progresiva (1 -> 9).
+// ============================================================================
+
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import {
+  CREADOR_MASTER_DATABASE,
+  CLAVES_CREADOR_AUTORIZADAS,
+  CreadorCredential,
+} from '@/components/AreaCreador/BovedaCreadorMaster';
 
 interface CreadorLoginProps {
   onLoginSuccess: (
@@ -29,35 +41,29 @@ const SESSION_KEY = 'synapse_sesion_activa_v1';
 const LOCK_KEY = 'synapse_temporal_lock_until';
 const BOT_LOCK_KEY = 'synapse_intrusion_lock';
 
-const PERFILES_MAESTROS_BASE: PerfilAutorizado[] = [
-  {
-    nombre: 'Alexander Segundo Castellanos Perozo',
-    cedula: '10433935',
-    claveMaestra: '*Paola123!',
-    clavesPermitidas: ['*Paola123!', '*Ac12345!', 'Iar661972', 'Albany123'],
-    nivel: 10,
-    rol: 'Creador / Superuser',
-    bloqueado: false
-  },
-  {
-    nombre: 'Aleanny Castellanos',
-    cedula: '279276795',
-    claveMaestra: '*Aleanny123',
-    clavesPermitidas: ['*Aleanny123'],
-    nivel: 1,
-    rol: 'Superuser',
-    bloqueado: false
-  },
-  {
-    nombre: 'Albany Castellanos',
-    cedula: '33323644',
-    claveMaestra: '*Albany123',
-    clavesPermitidas: ['*Albany123'],
-    nivel: 1,
-    rol: 'Superuser',
-    bloqueado: false
-  }
-];
+const CREADOR_CEDULA_MASTER = CREADOR_MASTER_DATABASE['10433935']?.cedula || '10433935';
+
+function construirBaseDesdeMaster(): PerfilAutorizado[] {
+  return Object.values(CREADOR_MASTER_DATABASE).map((item: CreadorCredential) => {
+    const esCreador = item.cedula === CREADOR_CEDULA_MASTER || item.nivelNumerico === 10;
+    const nivelBase = esCreador ? 10 : Math.min(Math.max(Number(item.nivelNumerico) || 1, 1), 9);
+    const claves = esCreador
+      ? Array.from(new Set([...item.passwords, ...CLAVES_CREADOR_AUTORIZADAS]))
+      : [...item.passwords];
+
+    return {
+      nombre: item.name,
+      cedula: item.cedula,
+      claveMaestra: claves[0] || '',
+      clavesPermitidas: claves,
+      nivel: nivelBase,
+      rol: esCreador ? 'Creador / Superuser' : 'Superuser',
+      bloqueado: false,
+    };
+  });
+}
+
+const PERFILES_MAESTROS_BASE: PerfilAutorizado[] = construirBaseDesdeMaster();
 
 function combinarPerfilesConBase(entrantes: PerfilAutorizado[]): PerfilAutorizado[] {
   const mapa = new Map<string, PerfilAutorizado>();
@@ -82,7 +88,11 @@ function combinarPerfilesConBase(entrantes: PerfilAutorizado[]): PerfilAutorizad
       });
     }
 
-    const esCreador = ced === '10433935' || Number(item.nivel) === 10;
+    const esCreador = ced === CREADOR_CEDULA_MASTER || Number(item.nivel) === 10;
+    if (esCreador) {
+      CLAVES_CREADOR_AUTORIZADAS.forEach((c) => listaClaves.add(c.trim()));
+    }
+
     const nivelFinal = esCreador ? 10 : Math.min(Math.max(Number(item.nivel) || 1, 1), 9);
 
     mapa.set(ced, {
@@ -93,7 +103,7 @@ function combinarPerfilesConBase(entrantes: PerfilAutorizado[]): PerfilAutorizad
       clavesPermitidas: Array.from(listaClaves),
       nivel: nivelFinal,
       rol: esCreador ? 'Creador / Superuser' : String(item.rol || 'Superuser').trim(),
-      bloqueado: esCreador ? false : Boolean(item.bloqueado)
+      bloqueado: esCreador ? false : Boolean(item.bloqueado),
     });
   }
 
@@ -172,7 +182,7 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
             rol:
               String(item.rol || '').trim() ||
               (Number(item.nivel) === 10 ? 'Creador / Superuser' : 'Superuser'),
-            bloqueado: Boolean(item.bloqueado)
+            bloqueado: Boolean(item.bloqueado),
           }));
           perfiles = combinarPerfilesConBase(mapeados);
           if (typeof window !== 'undefined') {
@@ -230,6 +240,10 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
     const base = PERFILES_MAESTROS_BASE.find((p) => p.cedula === usuario.cedula.trim());
     if (base?.clavesPermitidas) {
       base.clavesPermitidas.forEach((c) => candidatas.add(c.trim()));
+    }
+
+    if (usuario.cedula.trim() === CREADOR_CEDULA_MASTER) {
+      CLAVES_CREADOR_AUTORIZADAS.forEach((c) => candidatas.add(c.trim()));
     }
 
     return candidatas.has(limpia);
@@ -413,7 +427,7 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
       const usuarioActual = usuariosAutorizados.find((u) => u.cedula.trim() === cedula.trim());
       const nivelUsuario = usuarioActual ? Number(usuarioActual.nivel) : 1;
       const esCreador =
-        cedula.trim() === '10433935' ||
+        cedula.trim() === CREADOR_CEDULA_MASTER ||
         nivelUsuario === 10 ||
         Boolean(usuarioActual?.rol?.toLowerCase().includes('creador'));
 
@@ -430,7 +444,7 @@ export default function CreadorLogin({ onLoginSuccess }: CreadorLoginProps) {
             rol: rolFinal,
             nivel: esCreador ? 10 : nivelUsuario,
             modoSoloVer,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           })
         );
       }

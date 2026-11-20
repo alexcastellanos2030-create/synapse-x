@@ -1,4 +1,13 @@
-// app/data/bakeryConstants.ts
+// ============================================================================
+// USUARIOS TEMPORALES DE PRUEBA — SYNAPSE-X OS (OSAI INDUSTRIAL)
+// - Jerarquía: Nivel 10 exclusivo del Creador (10433935 en BovedaCreadorMaster);
+//   hijas (Aleanny y Albany) como Superusers en escala progresiva (Nivel 1 -> 9)
+//   por encima de ingenieros, técnicos y operadores.
+// - Columna `tipoUsuario`: "prueba" para registros temporales; "real" para
+//   usuarios definitivos una vez creados.
+// ============================================================================
+
+export type TipoUsuarioRegistro = "prueba" | "real";
 
 export interface UserCredential {
   cedula: string;
@@ -8,138 +17,137 @@ export interface UserCredential {
   passwords: string[];
   phone: string;
   rol: "ingeniero" | "tecnico" | "usuario";
+  subrolArea?: "administrador" | "operario_planta";
+  tipoUsuario: TipoUsuarioRegistro;
   maxEstaciones: number;
 }
 
 export const MASTER_USER_DATABASE: { [key: string]: UserCredential } = {
-  // --- INGENIEROS (Niveles Altos de Arquitectura y Control) ---
+  // 1. Ingeniero de Sistemas (Prueba)
   "40111222": {
     cedula: "40111222",
-    name: "Ing. Carlos Mendoza",
+    name: "Ingeniero de Sistemas (Prueba)",
     cargo: "Ingeniero en Sistemas",
-    nivel: "Nivel 9 - Arquitectura Core y Despliegue",
-    passwords: ["eng2026sys", "sysadmin99"],
+    nivel: "Nivel 8 - Soporte de Sistemas (Debajo de Superusers)",
+    passwords: ["eng2026sys"],
     phone: "+56987654321",
     rol: "ingeniero",
-    maxEstaciones: 12
-  },
-  "40333444": {
-    cedula: "40333444",
-    name: "Ing. Sofía Valenzuela",
-    cargo: "Ingeniero en Sistemas",
-    nivel: "Nivel 8 - Redes, Protocolos y Seguridad de Datos",
-    passwords: ["sysnet99", "netpass12"],
-    phone: "+56912345678",
-    rol: "ingeniero",
-    maxEstaciones: 12
+    tipoUsuario: "prueba",
+    maxEstaciones: 12,
   },
 
-  // --- TÉCNICOS (Niveles Medios-Altos de Soporte y Diagnóstico) ---
+  // 2. Técnico de Informática (Prueba)
   "50111222": {
     cedula: "50111222",
-    name: "Tec. Marcos Pérez",
+    name: "Técnico de Informática (Prueba)",
     cargo: "Técnico en Informática",
-    nivel: "Nivel 7 - Soporte Avanzado y Diagnóstico de Hardware",
-    passwords: ["tech2026", "soporte123"],
+    nivel: "Nivel 6 - Soporte Técnico y Terminales",
+    passwords: ["tech2026"],
     phone: "+56998887766",
     rol: "tecnico",
-    maxEstaciones: 6
-  },
-  "50333444": {
-    cedula: "50333444",
-    name: "Tec. Andrea Gómez",
-    cargo: "Técnico en Informática",
-    nivel: "Nivel 6 - Mantenimiento de Terminales e Interfaces",
-    passwords: ["tech99", "terminales45"],
-    phone: "+56944443322",
-    rol: "tecnico",
-    maxEstaciones: 6
+    tipoUsuario: "prueba",
+    maxEstaciones: 6,
   },
 
-  // --- OPERADORES DE TALLER (Niveles Operativos 1 al 5) ---
+  // 3. Operario 1 del Área de Usuario — Rol Administrador (Prueba)
   "60111111": {
     cedula: "60111111",
-    name: "Delvis Arteaga",
-    cargo: "Operador de Producción",
-    nivel: "Nivel 5 - Producción Líder y Supervisión de Línea",
-    passwords: ["delvis2026"],
+    name: "Operario Admin (Prueba)",
+    cargo: "Administrador de Área Usuario",
+    nivel: "Nivel 5 - Administración Operativa",
+    passwords: ["adminop2026"],
     phone: "+56911111111",
     rol: "usuario",
-    maxEstaciones: 2
+    subrolArea: "administrador",
+    tipoUsuario: "prueba",
+    maxEstaciones: 4,
   },
+
+  // 4. Operario 2 del Área de Usuario — Operario de Planta (Prueba)
   "60222222": {
     cedula: "60222222",
-    name: "Elvis Vera",
-    cargo: "Operador de Amasado",
-    nivel: "Nivel 4 - Estación de Amasado y Mezclas",
-    passwords: ["elvis2026"],
+    name: "Operario de Planta (Prueba)",
+    cargo: "Operario de Planta de Producción",
+    nivel: "Nivel 2 - Operación de Planta",
+    passwords: ["planta2026"],
     phone: "+56922222222",
     rol: "usuario",
-    maxEstaciones: 2
+    subrolArea: "operario_planta",
+    tipoUsuario: "prueba",
+    maxEstaciones: 2,
   },
-  "60333333": {
-    cedula: "60333333",
-    name: "Julio Zarraga",
-    cargo: "Operador de Horno",
-    nivel: "Nivel 3 - Control de Cocción y Horno",
-    passwords: ["julio2026"],
-    phone: "+56933333333",
-    rol: "usuario",
-    maxEstaciones: 2
-  },
-  "60444444": {
-    cedula: "60444444",
-    name: "Luis Farias",
-    cargo: "Operador de División",
-    nivel: "Nivel 2 - División y Formado de Masas",
-    passwords: ["luis2026"],
-    phone: "+56944444444",
-    rol: "usuario",
-    maxEstaciones: 2
-  },
-  "60555555": {
-    cedula: "60555555",
-    name: "Marlenys Batista",
-    cargo: "Operadora de Empaque",
-    nivel: "Nivel 1 - Empaque y Control Visual Inicial",
-    passwords: ["marlenys2026"],
-    phone: "+56955555555",
-    rol: "usuario",
-    maxEstaciones: 2
-  },
-  "60666666": {
-    cedula: "60666666",
-    name: "Oscar Rojas",
-    cargo: "Operador Logístico",
-    nivel: "Nivel 2 - Logística y Despacho de Insumos",
-    passwords: ["oscar2026"],
-    phone: "+56966666666",
-    rol: "usuario",
-    maxEstaciones: 2
-  },
-  "60777777": {
-    cedula: "60777777",
-    name: "Rudy Aspilcueta",
-    cargo: "Operador de Preparación",
-    nivel: "Nivel 3 - Preparación de Ingredientes y Pesaje",
-    passwords: ["rudy2026"],
-    phone: "+56977777777",
-    rol: "usuario",
-    maxEstaciones: 2
-  },
-  "60888888": {
-    cedula: "60888888",
-    name: "Tommy Zambrano",
-    cargo: "Operador de Acabados",
-    nivel: "Nivel 4 - Acabados, Coberturas y Toppings",
-    passwords: ["tommy2026"],
-    phone: "+56988888888",
-    rol: "usuario",
-    maxEstaciones: 2
-  }
 };
 
+// Listas separadas para editar fácilmente en cada sección
+export const USUARIOS_PRUEBA_AREA_USUARIO = Object.values(MASTER_USER_DATABASE).filter(
+  (u) => u.rol === "usuario"
+);
+
+export const USUARIOS_PRUEBA_TECNICOS = Object.values(MASTER_USER_DATABASE).filter(
+  (u) => u.rol === "tecnico"
+);
+
+export const USUARIOS_PRUEBA_INGENIEROS = Object.values(MASTER_USER_DATABASE).filter(
+  (u) => u.rol === "ingeniero"
+);
+
 export const generar30PedidosPrueba = () => {
-  // (Generador de pedidos intacto)
   return [];
 };
+2. SQL para crear las tablas base en Supabase (junto a boveda_familiar)
+Ya que boveda_familiar está creada con tus datos y los de tus dos hijas, aquí tienes el SQL limpio para crear las tablas de ingenieros, técnicos y usuarios/operarios con la columna tipo_usuario ('prueba' o 'real') para dejarlas listas antes de armar las relaciones:
+
+SQL
+create table if not exists public.usuarios_ingenieros (
+  id uuid primary key default gen_random_uuid(),
+  cedula text unique not null,
+  nombre text not null,
+  cargo text not null default 'Ingeniero en Sistemas',
+  nivel text not null default 'Nivel 8',
+  clave text not null,
+  telefono text,
+  tipo_usuario text not null default 'prueba' check (tipo_usuario in ('prueba', 'real')),
+  activo boolean not null default true,
+  creado_en timestamptz not null default now()
+);
+
+create table if not exists public.usuarios_tecnicos (
+  id uuid primary key default gen_random_uuid(),
+  cedula text unique not null,
+  nombre text not null,
+  cargo text not null default 'Técnico en Informática',
+  nivel text not null default 'Nivel 6',
+  clave text not null,
+  telefono text,
+  tipo_usuario text not null default 'prueba' check (tipo_usuario in ('prueba', 'real')),
+  activo boolean not null default true,
+  creado_en timestamptz not null default now()
+);
+
+create table if not exists public.usuarios_operarios (
+  id uuid primary key default gen_random_uuid(),
+  cedula text unique not null,
+  nombre text not null,
+  cargo text not null default 'Operario de Planta de Producción',
+  subrol_area text not null default 'operario_planta' check (subrol_area in ('administrador', 'operario_planta')),
+  nivel text not null default 'Nivel 2',
+  clave text not null,
+  telefono text,
+  tipo_usuario text not null default 'prueba' check (tipo_usuario in ('prueba', 'real')),
+  activo boolean not null default true,
+  creado_en timestamptz not null default now()
+);
+
+insert into public.usuarios_ingenieros (cedula, nombre, cargo, nivel, clave, telefono, tipo_usuario)
+values ('40111222', 'Ingeniero de Sistemas (Prueba)', 'Ingeniero en Sistemas', 'Nivel 8', 'eng2026sys', '+56987654321', 'prueba')
+on conflict (cedula) do nothing;
+
+insert into public.usuarios_tecnicos (cedula, nombre, cargo, nivel, clave, telefono, tipo_usuario)
+values ('50111222', 'Técnico de Informática (Prueba)', 'Técnico en Informática', 'Nivel 6', 'tech2026', '+56998887766', 'prueba')
+on conflict (cedula) do nothing;
+
+insert into public.usuarios_operarios (cedula, nombre, cargo, subrol_area, nivel, clave, telefono, tipo_usuario)
+values
+  ('60111111', 'Operario Admin (Prueba)', 'Administrador de Área Usuario', 'administrador', 'Nivel 5', 'adminop2026', '+56911111111', 'prueba'),
+  ('60222222', 'Operario de Planta (Prueba)', 'Operario de Planta de Producción', 'operario_planta', 'Nivel 2', 'planta2026', '+56922222222', 'prueba')
+on conflict (cedula) do nothing;

@@ -1,16 +1,28 @@
 "use client";
 
+// ============================================================================
+// PORTAL DE ACCESO SIMPLE LED — SYNAPSE-X OS (OSAI INDUSTRIAL)
+// - Verifica datos y claves del núcleo desde BovedaCreadorMaster.tsx y Supabase.
+// - Sin datos de prueba ni claves literales regadas en el componente.
+// - Jerarquía: Nivel 10 exclusivo del Creador (10433935); hijas como
+//   Superusers en escala progresiva (Nivel 1 -> Nivel 9) por encima de
+//   ingenieros, técnicos y operadores.
+// ============================================================================
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   LedEstado,
   OperadorPortal,
-  CEDULAS_BOVEDA_FAMILIAR_RESPALDO,
   CONFIG_PORTALES,
   CATALOGO_USUARIOS_RESPALDO,
   clasificarRolPorCargoYTipo,
   getLedClass,
 } from "@/lib/authPortales";
+import {
+  CREADOR_MASTER_DATABASE,
+  CLAVES_CREADOR_AUTORIZADAS,
+} from "@/components/AreaCreador/BovedaCreadorMaster";
 
 type PortalOperativo = Exclude<keyof typeof CONFIG_PORTALES, "creador">;
 
@@ -24,19 +36,44 @@ interface PortalSimpleLedProps {
   ) => void;
 }
 
+const CREADOR_CEDULA_MASTER = CREADOR_MASTER_DATABASE["10433935"]?.cedula || "10433935";
+
+function esRegistroDePrueba(nombre?: string): boolean {
+  const n = String(nombre || "").toLowerCase().trim();
+  return !n || n.includes("prueba") || n.includes("test") || n.includes("demo");
+}
+
+function construirRegistrosDesdeMaster(): OperadorPortal[] {
+  return Object.values(CREADOR_MASTER_DATABASE)
+    .filter((item) => !esRegistroDePrueba(item.name))
+    .map((item) => {
+      const esCreador = item.cedula === CREADOR_CEDULA_MASTER || item.nivelNumerico === 10;
+      return {
+        cedula: item.cedula,
+        nombre: item.name,
+        clave: item.passwords[0] || "",
+        nivel: esCreador
+          ? "Nivel 10 - Creador"
+          : `Nivel ${item.nivelNumerico || 1} - Superuser`,
+        cargoEspecifico: esCreador ? "Creador / Superuser" : "Superuser (Núcleo Familiar)",
+        rolAsignado: esCreador ? "creador" : "usuario",
+        esBovedaFamiliar: true,
+      };
+    });
+}
+
 export default function PortalAccesoSimpleLED({
   portal,
   onLoginSuccess,
 }: PortalSimpleLedProps) {
   const configPortal = CONFIG_PORTALES[portal];
+  const baseMaster = construirRegistrosDesdeMaster();
 
   const [cedula, setCedula] = useState("");
   const [nombreVerificado, setNombreVerificado] = useState("");
   const [clave, setClave] = useState("");
   const [usuarioEncontrado, setUsuarioEncontrado] = useState<OperadorPortal | null>(null);
-  const [listaCompleta, setListaCompleta] = useState<OperadorPortal[]>(
-    CATALOGO_USUARIOS_RESPALDO
-  );
+  const [listaCompleta, setListaCompleta] = useState<OperadorPortal[]>(baseMaster);
 
   const [led1, setLed1] = useState<LedEstado>("white");
   const [led2, setLed2] = useState<LedEstado>("white");
@@ -55,30 +92,41 @@ export default function PortalAccesoSimpleLED({
     setPaso1Ok(false);
     setMensaje("Paso 1: Ingrese su número de cédula.");
 
-    let base = [...CATALOGO_USUARIOS_RESPALDO];
+    const mapa = new Map<string, OperadorPortal>();
+    baseMaster.forEach((u) => mapa.set(u.cedula, u));
+
+    // Incorpora únicamente registros reales no marcados como prueba
+    CATALOGO_USUARIOS_RESPALDO.filter((u) => !esRegistroDePrueba(u.nombre)).forEach((u) => {
+      if (!mapa.has(u.cedula)) {
+        mapa.set(u.cedula, u);
+      }
+    });
+
+    setListaCompleta(Array.from(mapa.values()));
 
     async function cargarUsuarios() {
       try {
-        const mapa = new Map<string, OperadorPortal>();
-        base.forEach((u) => mapa.set(u.cedula, u));
-
         const { data: bovedaData, error: bovedaError } = await supabase
           .from("boveda_familiar")
           .select("*");
         if (!bovedaError && Array.isArray(bovedaData) && bovedaData.length > 0) {
           bovedaData.forEach((row: any) => {
             const ced = String(row.cedula || "").trim();
-            if (!ced) return;
+            const nom = String(row.nombre || "").trim();
+            if (!ced || esRegistroDePrueba(nom)) return;
+
+            const esCreador = ced === CREADOR_CEDULA_MASTER || Number(row.nivel) === 10;
+            const prev = mapa.get(ced);
+
             mapa.set(ced, {
               cedula: ced,
-              nombre: String(row.nombre || "").trim(),
-              clave: String(row.claveMaestra || row.clave_maestra || "*Paola123!").trim(),
-              nivel:
-                Number(row.nivel) === 10
-                  ? "Nivel 10 - Creador"
-                  : `Nivel ${Number(row.nivel) || 1} - Solo Ver`,
-              cargoEspecifico: "Bóveda Familiar",
-              rolAsignado: "usuario",
+              nombre: nom || prev?.nombre || "",
+              clave: String(row.claveMaestra || row.clave_maestra || prev?.clave || "").trim(),
+              nivel: esCreador
+                ? "Nivel 10 - Creador"
+                : `Nivel ${Math.min(Math.max(Number(row.nivel) || 1, 1), 9)} - Superuser`,
+              cargoEspecifico: esCreador ? "Creador / Superuser" : "Superuser (Núcleo Familiar)",
+              rolAsignado: esCreador ? "creador" : "usuario",
               esBovedaFamiliar: true,
             });
           });
@@ -90,7 +138,8 @@ export default function PortalAccesoSimpleLED({
         if (!usuariosError && Array.isArray(usuariosData) && usuariosData.length > 0) {
           usuariosData.forEach((row: any) => {
             const ced = String(row.cedula || "").trim();
-            if (!ced || mapa.has(ced)) return;
+            const nom = String(row.nombre || "").trim();
+            if (!ced || mapa.has(ced) || esRegistroDePrueba(nom)) return;
 
             const rolRaw = String(row.rol || row.tipo_portal || "").trim();
             const cargoRaw = String(
@@ -101,7 +150,7 @@ export default function PortalAccesoSimpleLED({
 
             mapa.set(ced, {
               cedula: ced,
-              nombre: String(row.nombre || "").trim(),
+              nombre: nom,
               clave: String(row.clave || row.password || "").trim(),
               nivel: String(row.nivel || "Nivel 1 - Operador"),
               cargoEspecifico: cargoRaw || rolRaw || "Empleado",
@@ -111,14 +160,12 @@ export default function PortalAccesoSimpleLED({
           });
         }
 
-        base = Array.from(mapa.values());
-        setListaCompleta(base);
+        setListaCompleta(Array.from(mapa.values()));
       } catch {
-        setListaCompleta(base);
+        setListaCompleta(Array.from(mapa.values()));
       }
     }
 
-    setListaCompleta(base);
     cargarUsuarios();
   }, [portal]);
 
@@ -152,8 +199,8 @@ export default function PortalAccesoSimpleLED({
     setMensaje("Paso 1: Verificando cédula...");
 
     const encontrado = listaCompleta.find((u) => u.cedula === limpio);
-    const esBoveda =
-      Boolean(encontrado?.esBovedaFamiliar) || CEDULAS_BOVEDA_FAMILIAR_RESPALDO.has(limpio);
+    const esCreador = limpio === CREADOR_CEDULA_MASTER || encontrado?.rolAsignado === "creador";
+    const esBoveda = Boolean(encontrado?.esBovedaFamiliar) || esCreador;
 
     if (encontrado && (esBoveda || encontrado.rolAsignado === portal)) {
       setLed1("green");
@@ -201,15 +248,19 @@ export default function PortalAccesoSimpleLED({
     }
 
     setLed3("yellow");
-    const clavesExtraCreador =
-      usuarioEncontrado.cedula === "10433935"
-        ? ["*Paola123!", "*Ac12345!", "Iar661972", "Albany123"]
-        : [usuarioEncontrado.clave];
+    const limpia = valor.trim();
+    const registroMaster = CREADOR_MASTER_DATABASE[usuarioEncontrado.cedula];
 
-    if (
-      (usuarioEncontrado.clave && valor.trim() === usuarioEncontrado.clave.trim()) ||
-      clavesExtraCreador.includes(valor.trim())
-    ) {
+    const clavesValidas = new Set<string>();
+    if (usuarioEncontrado.clave) clavesValidas.add(usuarioEncontrado.clave.trim());
+    if (registroMaster?.passwords) {
+      registroMaster.passwords.forEach((c) => clavesValidas.add(c.trim()));
+    }
+    if (usuarioEncontrado.cedula === CREADOR_CEDULA_MASTER) {
+      CLAVES_CREADOR_AUTORIZADAS.forEach((c) => clavesValidas.add(c.trim()));
+    }
+
+    if (clavesValidas.has(limpia)) {
       setLed3("green");
       setMensaje("¡Credencial validada! Listo para ingresar.");
     } else {

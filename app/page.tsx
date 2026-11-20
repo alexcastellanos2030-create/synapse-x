@@ -1,18 +1,30 @@
 "use client";
 
+// ============================================================================
+// PUNTO DE ENTRADA PRINCIPAL — SYNAPSE-X OS (OSAI INDUSTRIAL)
+// - Verifica identidad del núcleo desde BovedaCreadorMaster.tsx y Supabase.
+// - Jerarquía: Nivel 10 exclusivo del Creador (10433935); hijas como
+//   Superusers en escala progresiva (Nivel 1 -> Nivel 9) por encima de
+//   ingenieros, técnicos y operadores.
+// ============================================================================
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   PortalTipo,
   CLAVES_SESION,
-  CEDULAS_BOVEDA_FAMILIAR_RESPALDO,
   CONFIG_PORTALES,
 } from "@/lib/authPortales";
+import {
+  CREADOR_MASTER_DATABASE,
+  obtenerCredencialCreadorPorCedula,
+} from "@/components/AreaCreador/BovedaCreadorMaster";
 import CreadorLogin from "./components/AreaCreador/CreadorLogin";
 import PortalAccesoSimpleLED from "./components/PortalAccesoSimpleLED";
 import AreaOperacionesActiva from "./components/AreaOperacionesActiva";
 
 const ORDEN_PORTALES: PortalTipo[] = ["creador", "ingeniero", "tecnico", "usuario"];
+const CEDULAS_MASTER_FAMILIA = new Set<string>(Object.keys(CREADOR_MASTER_DATABASE));
 
 export default function Home() {
   const [sesionLista, setSesionLista] = useState<boolean>(false);
@@ -38,7 +50,7 @@ export default function Home() {
       const estacionGuardada = localStorage.getItem("synapse_estacion_activa") || "AC01";
       const bovedaGuardada =
         localStorage.getItem("synapse_boveda_familiar") === "true" ||
-        CEDULAS_BOVEDA_FAMILIAR_RESPALDO.has(cedulaGuardada);
+        CEDULAS_MASTER_FAMILIA.has(cedulaGuardada);
 
       if (sesionGuardada && cedulaGuardada) {
         setAutenticado(true);
@@ -89,8 +101,12 @@ export default function Home() {
     esBovedaFamiliar?: boolean
   ) => {
     const cedulaLimpia = String(cedula || "").trim();
+    const registroMaster = obtenerCredencialCreadorPorCedula(cedulaLimpia);
+
     let perteneceBoveda =
-      Boolean(esBovedaFamiliar) || CEDULAS_BOVEDA_FAMILIAR_RESPALDO.has(cedulaLimpia);
+      Boolean(esBovedaFamiliar) ||
+      Boolean(registroMaster) ||
+      CEDULAS_MASTER_FAMILIA.has(cedulaLimpia);
 
     try {
       const { data } = await supabase
@@ -108,11 +124,16 @@ export default function Home() {
     let nuevaArea = "usuario";
     let nuevaEstacion = "AU01";
     let rolFinal = rol;
+    let nivelFinal = nivel || registroMaster?.nivel || "Nivel 1";
 
     if (perteneceBoveda || rol === "creador" || rol === "Creador") {
       nuevaArea = "creador";
       nuevaEstacion = "AC01";
-      rolFinal = "creador";
+      rolFinal =
+        cedulaLimpia === "10433935" || registroMaster?.rol === "creador"
+          ? "creador"
+          : "superuser";
+      nivelFinal = registroMaster?.nivel || nivelFinal;
       perteneceBoveda = true;
     } else if (rol === "ingeniero" || rol === "tecnico") {
       nuevaArea = "st";
@@ -125,7 +146,7 @@ export default function Home() {
 
     setRolActivo(rolFinal);
     setCedulaActiva(cedulaLimpia);
-    setNivelActivo(nivel);
+    setNivelActivo(nivelFinal);
     setEsBovedaFamiliarActiva(perteneceBoveda);
     setAreaActiva(nuevaArea);
     setEstacionActiva(nuevaEstacion);
@@ -135,7 +156,7 @@ export default function Home() {
       localStorage.setItem("synapse_sesion_activa", "true");
       localStorage.setItem("synapse_rol_activo", rolFinal);
       localStorage.setItem("synapse_cedula_activa", cedulaLimpia);
-      localStorage.setItem("synapse_nivel_activo", nivel);
+      localStorage.setItem("synapse_nivel_activo", nivelFinal);
       localStorage.setItem("synapse_area_activa", nuevaArea);
       localStorage.setItem("synapse_estacion_activa", nuevaEstacion);
       localStorage.setItem(
@@ -234,7 +255,13 @@ export default function Home() {
               <div className="w-full flex flex-col items-center [&>div]:border-slate-800 [&>div]:bg-[#070d1a] [&_h1]:!text-xl [&_h1]:md:!text-2xl [&_h1]:!leading-tight [&_h1]:!text-emerald-400">
                 <CreadorLogin
                   onLoginSuccess={(rol, cedula) => {
-                    handleLoginSuccess(rol, cedula, "Nivel 10 - Creador", true);
+                    const reg = obtenerCredencialCreadorPorCedula(cedula);
+                    handleLoginSuccess(
+                      rol,
+                      cedula,
+                      reg?.nivel || "Nivel 10 - Acceso Total Absoluto (Super User / Creador)",
+                      true
+                    );
                   }}
                 />
               </div>

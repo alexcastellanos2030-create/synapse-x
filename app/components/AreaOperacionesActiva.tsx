@@ -34,6 +34,7 @@ export default function AreaOperacionesActiva({
   onCerrarSesion,
 }: AreaOperacionesActivaProps) {
   const [verAreaCodigos, setVerAreaCodigos] = useState<boolean>(false);
+  const [refreshToken, setRefreshToken] = useState<number>(0);
 
   const esCreadorPrincipal =
     cedulaActiva === "10433935" || nivelActivo.toLowerCase().includes("nivel 10");
@@ -68,6 +69,11 @@ export default function AreaOperacionesActiva({
     setEstacionActiva(estacion);
   };
 
+  const handleActualizarBoveda = () => {
+    setRefreshToken((prev) => prev + 1);
+    onRefrescarEstado();
+  };
+
   const mostrarBovedaFamiliar =
     areaActiva === "creador" &&
     !verAreaCodigos &&
@@ -75,7 +81,7 @@ export default function AreaOperacionesActiva({
 
   return (
     <div className="flex h-screen bg-[#030712] text-slate-100 font-mono overflow-hidden">
-      {/* Barra sidebar del Creador con los 4 íconos fijos bajo la marca */}
+      {/* Barra sidebar del Creador */}
       {areaActiva === "creador" && (
         <SidebarCreador
           areaActiva={areaActiva}
@@ -85,6 +91,7 @@ export default function AreaOperacionesActiva({
           setEstacionActiva={handleSeleccionEstacionCreador}
           handleCerrarSesion={onCerrarSesion}
           onRefrescarEstado={onRefrescarEstado}
+          onActualizarBoveda={handleActualizarBoveda}
           esCreadorPrincipal={esCreadorPrincipal}
           verAreaCodigos={verAreaCodigos}
           onAbrirAreaCodigos={abrirAreaCodigos}
@@ -126,13 +133,6 @@ export default function AreaOperacionesActiva({
           </div>
 
           <div className="text-xs text-slate-400 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onRefrescarEstado}
-              className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-emerald-300 font-bold cursor-pointer"
-            >
-              ↻ Actualizar
-            </button>
             <span>
               Operador: <strong className="text-slate-200">{cedulaActiva}</strong>
             </span>
@@ -171,7 +171,7 @@ export default function AreaOperacionesActiva({
               </p>
             </div>
           ) : mostrarBovedaFamiliar ? (
-            <BovedaFamiliarAC01 />
+            <BovedaFamiliarAC01 key={`boveda-${refreshToken}`} />
           ) : (
             <div className="max-w-5xl mx-auto bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl space-y-4">
               <h1 className="text-xl md:text-2xl font-extrabold text-cyan-400 tracking-wide uppercase">
