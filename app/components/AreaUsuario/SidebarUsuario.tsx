@@ -181,7 +181,7 @@ export default function SidebarUsuario({
 
   return (
     <aside
-      className={`bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 select-none transition-all duration-300 relative z-40 font-mono text-[10px] leading-relaxed ${
+      className={`bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 select-none transition-all duration-300 relative z-40 font-mono text-[5px] leading-none ${
         colapsado ? "w-12" : "w-52"
       }`}
     >
@@ -197,11 +197,11 @@ export default function SidebarUsuario({
             <ChefHat className="w-3 h-3" />
           </button>
           {!colapsado && (
-            <div className="truncate text-[10px] leading-relaxed">
+            <div className="truncate text-[5px] leading-tight">
               <span className="font-semibold text-white block truncate">
                 ÁREA USUARIO · AU00
               </span>
-              <span className="text-[9px] text-slate-400 block truncate">
+              <span className="text-[5px] text-slate-400 block truncate">
                 {tipoUsuario}
               </span>
             </div>
@@ -211,7 +211,7 @@ export default function SidebarUsuario({
           <button
             type="button"
             onClick={() => setColapsado(true)}
-            className="text-slate-500 hover:text-slate-300 p-0.5 cursor-pointer"
+            className="text-slate-500 hover:text-slate-300 p-0.5 cursor-pointer text-[5px] leading-none"
             title="Contraer barra"
           >
             <ChevronLeft className="w-3 h-3" />
@@ -247,7 +247,7 @@ export default function SidebarUsuario({
       </div>
 
       {/* NAVEGACIÓN DE ESTACIONES Y MÓDULOS */}
-      <div className="p-1.5 flex-1 overflow-y-auto space-y-0.5 text-[10px] leading-relaxed">
+      <div className="p-1.5 flex-1 overflow-y-auto space-y-0.5 text-[5px] leading-tight">
         <button
           type="button"
           onClick={() => {
@@ -255,7 +255,7 @@ export default function SidebarUsuario({
             setEstacionActiva("AU00");
           }}
           title="AU00 · Dashboard"
-          className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-relaxed ${
+          className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[5px] leading-tight ${
             estacionNormalizada === "AU00"
               ? "bg-purple-600 text-white font-semibold"
               : "bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 text-slate-300 hover:text-white"
@@ -277,7 +277,7 @@ export default function SidebarUsuario({
                 setEstacionActiva(item.id);
               }}
               title={`${item.id} · ${item.label}`}
-              className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-relaxed ${
+              className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[5px] leading-tight ${
                 activo
                   ? "bg-purple-600 text-white font-semibold"
                   : "bg-slate-900/50 hover:bg-slate-900 border border-slate-800/70 text-slate-300 hover:text-white"
@@ -301,7 +301,7 @@ export default function SidebarUsuario({
               setEstacionActiva("AU10");
             }}
             title="Portal AU01"
-            className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-relaxed ${
+            className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[5px] leading-tight ${
               estacionNormalizada === "AU10"
                 ? "bg-purple-600 text-white font-semibold"
                 : "bg-slate-900/50 hover:bg-slate-900 border border-slate-800/70 text-slate-300 hover:text-white"
@@ -318,7 +318,7 @@ export default function SidebarUsuario({
               setEstacionActiva("AU11");
             }}
             title="Registro Pedido (AU02)"
-            className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-relaxed ${
+            className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[5px] leading-tight ${
               estacionNormalizada === "AU11"
                 ? "bg-amber-500 text-slate-950 font-semibold"
                 : "bg-slate-900/50 hover:bg-slate-900 border border-slate-800/70 text-slate-300 hover:text-white"
@@ -331,7 +331,7 @@ export default function SidebarUsuario({
       </div>
 
       {/* PARTE INFERIOR MINIMIZADA: MICROICONOS DE TEMA + MICROBOTONES ACTUALIZAR Y CERRAR SESIÓN */}
-      <div className="p-1.5 border-t border-slate-800 bg-slate-950/95 space-y-1 text-[10px] leading-relaxed">
+      <div className="p-1.5 border-t border-slate-800 bg-slate-950/95 space-y-1 text-[5px] leading-tight">
         <div
           className={`grid gap-1 bg-black/80 p-0.5 rounded border border-slate-800/90 ${
             colapsado ? "grid-cols-1" : "grid-cols-3"
@@ -364,7 +364,7 @@ export default function SidebarUsuario({
             onClick={handleActualizar}
             title="Actualizar"
             aria-label="Actualizar"
-            className="h-6 px-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 flex items-center justify-center gap-1 transition-all cursor-pointer text-[10px] leading-relaxed"
+            className="h-6 px-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 flex items-center justify-center gap-1 transition-all cursor-pointer text-[5px] leading-tight"
           >
             <RefreshCw className={`w-3 h-3 shrink-0 ${sincronizando ? "animate-spin" : ""}`} />
             {!colapsado && <span className="truncate">Refrescar</span>}
@@ -375,7 +375,7 @@ export default function SidebarUsuario({
             onClick={handleCerrarSesion}
             title="Cerrar sesión"
             aria-label="Cerrar sesión"
-            className="h-6 px-1.5 rounded bg-red-950/50 hover:bg-red-900/70 border border-red-800/60 text-red-300 flex items-center justify-center gap-1 transition-all cursor-pointer text-[10px] leading-relaxed"
+            className="h-6 px-1.5 rounded bg-red-950/50 hover:bg-red-900/70 border border-red-800/60 text-red-300 flex items-center justify-center gap-1 transition-all cursor-pointer text-[5px] leading-tight"
           >
             <LogOut className="w-3 h-3 shrink-0" />
             {!colapsado && <span className="truncate">Salir</span>}
