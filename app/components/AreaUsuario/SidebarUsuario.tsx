@@ -161,13 +161,15 @@ export default function SidebarUsuario({
     { id: "sistema", titulo: "Sistema", Icono: Monitor },
   ];
 
-  const handleActualizar = () => {
+  const handleActualizarSistema = () => {
     setSincronizando(true);
     if (onRefrescarEstado) {
       onRefrescarEstado();
     }
     setTimeout(() => {
-      setSincronizando(false);
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
     }, 350);
   };
 
@@ -181,8 +183,8 @@ export default function SidebarUsuario({
 
   return (
     <aside
-      className={`bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 select-none transition-all duration-300 relative z-40 font-mono text-[5px] leading-none ${
-        colapsado ? "w-12" : "w-52"
+      className={`bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 select-none transition-all duration-300 relative z-40 font-mono text-[10px] leading-tight ${
+        colapsado ? "w-14" : "w-56"
       }`}
     >
       {/* CABECERA COMPACTA */}
@@ -194,14 +196,14 @@ export default function SidebarUsuario({
             className="p-1 rounded border border-purple-500/30 bg-purple-500/10 text-purple-400 transition-all cursor-pointer flex items-center justify-center shrink-0 hover:bg-purple-500/20"
             title={colapsado ? "Desplegar barra" : "Contraer barra"}
           >
-            <ChefHat className="w-3 h-3" />
+            <ChefHat className="w-3.5 h-3.5" />
           </button>
           {!colapsado && (
-            <div className="truncate text-[5px] leading-tight">
+            <div className="truncate text-[10px] leading-tight">
               <span className="font-semibold text-white block truncate">
                 ÁREA USUARIO · AU00
               </span>
-              <span className="text-[5px] text-slate-400 block truncate">
+              <span className="text-[10px] text-slate-400 block truncate">
                 {tipoUsuario}
               </span>
             </div>
@@ -211,10 +213,10 @@ export default function SidebarUsuario({
           <button
             type="button"
             onClick={() => setColapsado(true)}
-            className="text-slate-500 hover:text-slate-300 p-0.5 cursor-pointer text-[5px] leading-none"
+            className="text-slate-500 hover:text-slate-300 p-0.5 cursor-pointer text-[10px] leading-tight"
             title="Contraer barra"
           >
-            <ChevronLeft className="w-3 h-3" />
+            <ChevronLeft className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
@@ -235,11 +237,11 @@ export default function SidebarUsuario({
                 }}
                 title={btn.label}
                 aria-label={btn.label}
-                className={`h-6 rounded flex items-center justify-center border transition-all cursor-pointer ${
+                className={`h-7 rounded flex items-center justify-center border transition-all cursor-pointer ${
                   esActiva ? btn.activoClase : btn.libreClase
                 }`}
               >
-                <IconBtn className="w-3 h-3 shrink-0" />
+                <IconBtn className="w-3.5 h-3.5 shrink-0" />
               </button>
             );
           })}
@@ -247,7 +249,7 @@ export default function SidebarUsuario({
       </div>
 
       {/* NAVEGACIÓN DE ESTACIONES Y MÓDULOS */}
-      <div className="p-1.5 flex-1 overflow-y-auto space-y-0.5 text-[5px] leading-tight">
+      <div className="p-1.5 flex-1 overflow-y-auto space-y-1 text-[10px] leading-tight">
         <button
           type="button"
           onClick={() => {
@@ -255,13 +257,13 @@ export default function SidebarUsuario({
             setEstacionActiva("AU00");
           }}
           title="AU00 · Dashboard"
-          className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[5px] leading-tight ${
+          className={`w-full flex items-center gap-1.5 px-2 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-tight ${
             estacionNormalizada === "AU00"
               ? "bg-purple-600 text-white font-semibold"
               : "bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 text-slate-300 hover:text-white"
           }`}
         >
-          <Home className="w-3 h-3 shrink-0 text-purple-300" />
+          <Home className="w-3.5 h-3.5 shrink-0 text-purple-300" />
           {!colapsado && <span className="truncate">AU00 · Dashboard</span>}
         </button>
 
@@ -277,13 +279,13 @@ export default function SidebarUsuario({
                 setEstacionActiva(item.id);
               }}
               title={`${item.id} · ${item.label}`}
-              className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[5px] leading-tight ${
+              className={`w-full flex items-center gap-1.5 px-2 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-tight ${
                 activo
                   ? "bg-purple-600 text-white font-semibold"
                   : "bg-slate-900/50 hover:bg-slate-900 border border-slate-800/70 text-slate-300 hover:text-white"
               }`}
             >
-              <IconComponent className={`w-3 h-3 shrink-0 ${activo ? "text-white" : item.color}`} />
+              <IconComponent className={`w-3.5 h-3.5 shrink-0 ${activo ? "text-white" : item.color}`} />
               {!colapsado && (
                 <span className="truncate">
                   {item.id} · {item.label}
@@ -293,7 +295,7 @@ export default function SidebarUsuario({
           );
         })}
 
-        <div className="pt-1 mt-1 border-t border-slate-800/80 space-y-0.5">
+        <div className="pt-1 mt-1 border-t border-slate-800/80 space-y-1">
           <button
             type="button"
             onClick={() => {
@@ -301,13 +303,13 @@ export default function SidebarUsuario({
               setEstacionActiva("AU10");
             }}
             title="Portal AU01"
-            className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[5px] leading-tight ${
+            className={`w-full flex items-center gap-1.5 px-2 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-tight ${
               estacionNormalizada === "AU10"
                 ? "bg-purple-600 text-white font-semibold"
                 : "bg-slate-900/50 hover:bg-slate-900 border border-slate-800/70 text-slate-300 hover:text-white"
             }`}
           >
-            <LayoutDashboard className="w-3 h-3 shrink-0 text-purple-400" />
+            <LayoutDashboard className="w-3.5 h-3.5 shrink-0 text-purple-400" />
             {!colapsado && <span className="truncate">Portal AU01</span>}
           </button>
 
@@ -318,22 +320,38 @@ export default function SidebarUsuario({
               setEstacionActiva("AU11");
             }}
             title="Registro Pedido (AU02)"
-            className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded transition-all cursor-pointer text-left text-[5px] leading-tight ${
+            className={`w-full flex items-center gap-1.5 px-2 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-tight ${
               estacionNormalizada === "AU11"
                 ? "bg-amber-500 text-slate-950 font-semibold"
                 : "bg-slate-900/50 hover:bg-slate-900 border border-slate-800/70 text-slate-300 hover:text-white"
             }`}
           >
-            <ClipboardList className="w-3 h-3 shrink-0 text-amber-400" />
+            <ClipboardList className="w-3.5 h-3.5 shrink-0 text-amber-400" />
             {!colapsado && <span className="truncate">Registro Pedido (AU02)</span>}
           </button>
         </div>
       </div>
 
-      {/* PARTE INFERIOR MINIMIZADA: MICROICONOS DE TEMA + MICROBOTONES ACTUALIZAR Y CERRAR SESIÓN */}
-      <div className="p-1.5 border-t border-slate-800 bg-slate-950/95 space-y-1 text-[5px] leading-tight">
+      {/* PARTE INFERIOR: ACTUALIZAR SISTEMA + MICROICONOS DE TEMA + CERRAR SESIÓN */}
+      <div className="p-1.5 border-t border-slate-800 bg-slate-950/95 space-y-1 text-[10px] leading-tight">
+        <button
+          type="button"
+          onClick={handleActualizarSistema}
+          disabled={sincronizando}
+          title="Actualizar sistema"
+          aria-label="Actualizar sistema"
+          className="w-full h-7 px-2 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer text-[10px] leading-tight font-semibold"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${sincronizando ? "animate-spin" : ""}`} />
+          {!colapsado && (
+            <span className="truncate">
+              {sincronizando ? "SINCRONIZANDO..." : "ACTUALIZAR SISTEMA"}
+            </span>
+          )}
+        </button>
+
         <div
-          className={`grid gap-1 bg-black/80 p-0.5 rounded border border-slate-800/90 ${
+          className={`grid gap-1 bg-black/80 p-1 rounded border border-slate-800/90 ${
             colapsado ? "grid-cols-1" : "grid-cols-3"
           }`}
         >
@@ -346,41 +364,28 @@ export default function SidebarUsuario({
                 onClick={() => setTema(id)}
                 title={titulo}
                 aria-label={titulo}
-                className={`h-5 rounded flex items-center justify-center transition-all cursor-pointer ${
+                className={`h-6 rounded flex items-center justify-center transition-all cursor-pointer ${
                   seleccionado
                     ? "bg-purple-500 text-white"
                     : "text-slate-400 hover:bg-slate-900 hover:text-white"
                 }`}
               >
-                <Icono className="w-3 h-3 shrink-0" />
+                <Icono className="w-3.5 h-3.5 shrink-0" />
               </button>
             );
           })}
         </div>
 
-        <div className={`grid gap-1 ${colapsado ? "grid-cols-1" : "grid-cols-2"}`}>
-          <button
-            type="button"
-            onClick={handleActualizar}
-            title="Actualizar"
-            aria-label="Actualizar"
-            className="h-6 px-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 flex items-center justify-center gap-1 transition-all cursor-pointer text-[5px] leading-tight"
-          >
-            <RefreshCw className={`w-3 h-3 shrink-0 ${sincronizando ? "animate-spin" : ""}`} />
-            {!colapsado && <span className="truncate">Refrescar</span>}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleCerrarSesion}
-            title="Cerrar sesión"
-            aria-label="Cerrar sesión"
-            className="h-6 px-1.5 rounded bg-red-950/50 hover:bg-red-900/70 border border-red-800/60 text-red-300 flex items-center justify-center gap-1 transition-all cursor-pointer text-[5px] leading-tight"
-          >
-            <LogOut className="w-3 h-3 shrink-0" />
-            {!colapsado && <span className="truncate">Salir</span>}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleCerrarSesion}
+          title="Cerrar sesión"
+          aria-label="Cerrar sesión"
+          className="w-full h-7 px-2 rounded bg-red-950/50 hover:bg-red-900/70 border border-red-800/60 text-red-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer text-[10px] leading-tight font-semibold"
+        >
+          <LogOut className="w-3.5 h-3.5 shrink-0" />
+          {!colapsado && <span className="truncate">CERRAR SESIÓN</span>}
+        </button>
       </div>
     </aside>
   );
