@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 
+export type TipoUsuarioSistema = "prueba" | "real";
+
 interface SidebarServicioTecnicoProps {
   areaActiva: "superuser" | "st" | string;
   onChangeArea: (nuevaArea: string) => void;
   rolActivo: string;
   cedulaActiva?: string;
   esBovedaFamiliarActiva?: boolean;
+  tipoUsuario?: TipoUsuarioSistema;
   estacionActiva: string;
   setEstacionActiva: (estacion: string) => void;
   handleCerrarSesion: () => void;
@@ -25,6 +28,7 @@ export default function SidebarServicioTecnico({
   rolActivo,
   cedulaActiva = "",
   esBovedaFamiliarActiva = false,
+  tipoUsuario = "real",
   estacionActiva,
   setEstacionActiva,
   handleCerrarSesion,
@@ -72,28 +76,41 @@ export default function SidebarServicioTecnico({
     !esNucleoFamiliar &&
     (rolLimpio.includes("ingeniero") ||
       rolLimpio.includes("tecnico") ||
+      rolLimpio.includes("técnico") ||
       rolLimpio === "st" ||
       rolLimpio === "servicio_tecnico");
 
-  const botonesAreas = (() => {
-    if (esNucleoFamiliar) {
-      return [
-        { id: "usuario", label: "Área de Usuario", icon: "👤", estacion: "AU01" },
-        { id: "st", label: "Área de Servicio Técnico", icon: "🛠️", estacion: "ST01" },
-        { id: "creador", label: "Área de Creador", icon: "👑", estacion: "AC01" },
-        { id: "codigo", label: "Área de Código", icon: "💻", estacion: "CD01" },
-      ];
-    }
-    if (esPersonalST) {
-      return [
-        { id: "usuario", label: "Área de Usuario", icon: "👤", estacion: "AU01" },
-        { id: "st", label: "Área de Servicio Técnico", icon: "🛠️", estacion: "ST01" },
-      ];
-    }
-    return [
-      { id: "usuario", label: "Área de Usuario", icon: "👤", estacion: "AU01" },
-    ];
-  })();
+  // Siempre construimos los 4 botones de área; se habilitan o restringen según rol/jerarquía
+  const botonesAreas = [
+    {
+      id: "usuario",
+      label: "Área de Usuario",
+      icon: "👤",
+      estacion: "AU01",
+      habilitado: true,
+    },
+    {
+      id: "st",
+      label: "Área de Servicio Técnico",
+      icon: "🛠️",
+      estacion: "ST01",
+      habilitado: true,
+    },
+    {
+      id: "creador",
+      label: "Área de Creador",
+      icon: "👑",
+      estacion: "AC01",
+      habilitado: esNucleoFamiliar,
+    },
+    {
+      id: "codigo",
+      label: "Área de Código",
+      icon: "💻",
+      estacion: "CD01",
+      habilitado: esNucleoFamiliar,
+    },
+  ];
 
   const estacionesST = [
     { id: "ST01", label: "ST01: Panel Central ST" },
@@ -114,15 +131,20 @@ export default function SidebarServicioTecnico({
     if (esNucleoFamiliar || rolLimpio.includes("ingeniero")) {
       return 12;
     }
-    if (rolLimpio.includes("tecnico") || rolLimpio === "tecnico") {
+    if (rolLimpio.includes("tecnico") || rolLimpio.includes("técnico") || rolLimpio === "tecnico") {
       return 6;
     }
-    return 12;
+    return esPersonalST ? 6 : 12;
   };
 
   const estacionesVisibles = estacionesST.slice(0, getMaxEstacionesVisibles());
 
-  const handleSeleccionArea = (idArea: string, estacionSugerida?: string) => {
+  const handleSeleccionArea = (
+    idArea: string,
+    habilitado: boolean,
+    estacionSugerida?: string
+  ) => {
+    if (!habilitado) return;
     if (estacionSugerida && idArea === "st") {
       setEstacionActiva(estacionSugerida);
     }
@@ -143,7 +165,7 @@ export default function SidebarServicioTecnico({
               SYNAPSE-X OS
             </span>
             <span className="font-mono text-[8px] text-slate-400 tracking-tight truncate">
-              Área de Servicio Técnico
+              Área de Servicio Técnico ({tipoUsuario})
             </span>
           </div>
         )}
@@ -157,30 +179,37 @@ export default function SidebarServicioTecnico({
         </button>
       </div>
 
-      {/* Botones superiores de Áreas según perfil */}
+      {/* 4 botones de Áreas arriba en fila (iconos siempre visibles) */}
       <div className="p-1.5 border-b border-slate-800/80 bg-slate-950/90 space-y-1">
         {!colapsado && (
           <span className="block text-[8px] font-mono uppercase tracking-wider text-slate-500 px-1">
             Áreas del Sistema
           </span>
         )}
-        <div className="flex flex-col gap-1">
+        <div
+          className={`grid gap-1 ${
+            colapsado ? "grid-cols-1" : "grid-cols-4"
+          }`}
+        >
           {botonesAreas.map((btn) => {
             const esActiva = areaActiva === btn.id;
             return (
               <button
                 key={btn.id}
                 type="button"
-                onClick={() => handleSeleccionArea(btn.id, btn.estacion)}
-                title={btn.label}
-                className={`w-full text-left px-2 py-1 rounded font-mono text-[9px] transition-all cursor-pointer flex items-center gap-1.5 ${
+                disabled={!btn.habilitado}
+                onClick={() => handleSeleccionArea(btn.id, btn.habilitado, btn.estacion)}
+                title={btn.habilitado ? btn.label : `${btn.label} (Restringido)`}
+                aria-label={btn.label}
+                className={`h-7 rounded font-mono text-[11px] transition-all flex items-center justify-center ${
                   esActiva
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 font-bold"
-                    : "bg-slate-900/70 text-slate-300 hover:bg-slate-800 border border-slate-800/80"
+                    ? "bg-cyan-500/25 text-cyan-300 border border-cyan-400/60 font-bold cursor-pointer"
+                    : btn.habilitado
+                    ? "bg-slate-900/80 text-slate-200 hover:bg-slate-800 border border-slate-800 cursor-pointer"
+                    : "bg-slate-950/50 text-slate-600 border border-slate-900 opacity-40 cursor-not-allowed"
                 }`}
               >
-                <span className="text-[10px] leading-none shrink-0">{btn.icon}</span>
-                {!colapsado && <span className="truncate">{btn.label}</span>}
+                <span className="leading-none">{btn.icon}</span>
               </button>
             );
           })}
