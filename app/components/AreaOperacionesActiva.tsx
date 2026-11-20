@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import SidebarCreador from "./AreaCreador/SidebarCreador";
 import SidebarServicioTecnico from "./AreaServicioTecnico/SidebarServicioTecnico";
 import SidebarUsuario from "./AreaUsuario/SidebarUsuario";
 import BovedaFamiliarAC01 from "./AreaCreador/PortalesCreador/BovedaFamiliarAC01";
@@ -42,20 +43,52 @@ export default function AreaOperacionesActiva({
     setAreaActiva(nuevaArea);
     if (nuevaArea === "creador") {
       setEstacionActiva("AC01");
-    } else if (nuevaArea === "st") {
+    } else if (nuevaArea === "st" || nuevaArea === "superuser") {
+      setAreaActiva("st");
       setEstacionActiva("ST01");
     } else if (nuevaArea === "usuario") {
       setEstacionActiva("AU01");
     }
   };
 
+  const abrirAreaCodigos = () => {
+    if (!esCreadorPrincipal) return;
+    setAreaActiva("creador");
+    setEstacionActiva("AC00");
+    setVerAreaCodigos(true);
+  };
+
+  const handleSeleccionEstacionCreador = (estacion: string) => {
+    if (estacion === "AC00" && esCreadorPrincipal) {
+      setEstacionActiva("AC00");
+      setVerAreaCodigos(true);
+      return;
+    }
+    setVerAreaCodigos(false);
+    setEstacionActiva(estacion);
+  };
+
   const mostrarBovedaFamiliar =
     areaActiva === "creador" &&
     !verAreaCodigos &&
-    (estacionActiva === "AC00" || estacionActiva === "AC01" || !estacionActiva);
+    (estacionActiva === "AC01" || !estacionActiva);
 
   return (
     <div className="flex h-screen bg-[#030712] text-slate-100 font-mono overflow-hidden">
+      {/* Barra sidebar del Creador */}
+      {areaActiva === "creador" && (
+        <SidebarCreador
+          areaActiva={areaActiva}
+          onChangeArea={navegarArea}
+          rolActivo={rolActivo}
+          estacionActiva={verAreaCodigos ? "AC00" : estacionActiva}
+          setEstacionActiva={handleSeleccionEstacionCreador}
+          handleCerrarSesion={onCerrarSesion}
+          onRefrescarEstado={onRefrescarEstado}
+        />
+      )}
+
+      {/* Barra sidebar de Servicio Técnico */}
       {areaActiva === "st" && (
         <SidebarServicioTecnico
           areaActiva={areaActiva}
@@ -66,6 +99,8 @@ export default function AreaOperacionesActiva({
           handleCerrarSesion={onCerrarSesion}
         />
       )}
+
+      {/* Barra sidebar de Usuario / Operación */}
       {areaActiva === "usuario" && (
         <SidebarUsuario
           areaActiva={areaActiva}
@@ -76,17 +111,8 @@ export default function AreaOperacionesActiva({
           handleCerrarSesion={onCerrarSesion}
         />
       )}
-      {areaActiva === "creador" && (
-        <SidebarServicioTecnico
-          areaActiva={areaActiva}
-          onChangeArea={navegarArea}
-          rolActivo={rolActivo}
-          estacionActiva={estacionActiva}
-          setEstacionActiva={setEstacionActiva}
-          handleCerrarSesion={onCerrarSesion}
-        />
-      )}
 
+      {/* Contenedor principal de la estación activa */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950/50">
         <header className="h-14 border-b border-slate-800/80 bg-slate-950/80 px-6 flex items-center justify-between shrink-0 gap-4">
           <div className="flex items-center space-x-3 flex-wrap gap-y-1">
@@ -100,7 +126,7 @@ export default function AreaOperacionesActiva({
                 <button
                   type="button"
                   onClick={() => navegarArea("creador")}
-                  className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer border ${
+                  className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer border ${
                     areaActiva === "creador" && !verAreaCodigos
                       ? "bg-emerald-500 text-black border-emerald-400"
                       : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800"
@@ -111,7 +137,7 @@ export default function AreaOperacionesActiva({
                 <button
                   type="button"
                   onClick={() => navegarArea("st")}
-                  className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer border ${
+                  className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer border ${
                     areaActiva === "st"
                       ? "bg-cyan-500 text-black border-cyan-400"
                       : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800"
@@ -122,7 +148,7 @@ export default function AreaOperacionesActiva({
                 <button
                   type="button"
                   onClick={() => navegarArea("usuario")}
-                  className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer border ${
+                  className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer border ${
                     areaActiva === "usuario"
                       ? "bg-pink-500 text-black border-pink-400"
                       : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800"
@@ -133,8 +159,8 @@ export default function AreaOperacionesActiva({
                 {esCreadorPrincipal && (
                   <button
                     type="button"
-                    onClick={() => setVerAreaCodigos((prev) => !prev)}
-                    className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer border ${
+                    onClick={abrirAreaCodigos}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer border ${
                       verAreaCodigos
                         ? "bg-amber-400 text-black border-amber-300"
                         : "bg-slate-900 text-amber-300 border-amber-500/40 hover:bg-slate-800"
@@ -147,7 +173,7 @@ export default function AreaOperacionesActiva({
             )}
           </div>
 
-          <div className="text-[11px] text-slate-400 flex items-center gap-3">
+          <div className="text-xs text-slate-400 flex items-center gap-3">
             <button
               type="button"
               onClick={onRefrescarEstado}
@@ -158,21 +184,21 @@ export default function AreaOperacionesActiva({
             <span>
               Operador: <strong className="text-slate-200">{cedulaActiva}</strong>
             </span>
-            <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-cyan-300 font-semibold">
+            <span className="px-2.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-cyan-300 font-semibold">
               {nivelActivo || rolActivo}
             </span>
           </div>
         </header>
 
-        <div className="flex-1 p-6 overflow-y-auto space-y-4">
+        <div className="flex-1 p-6 overflow-y-auto space-y-5">
           {avisoActualizacion && (
-            <div className="max-w-6xl mx-auto px-4 py-2 rounded-xl bg-emerald-950/50 border border-emerald-500/40 text-xs text-emerald-300 font-semibold">
+            <div className="max-w-6xl mx-auto px-4 py-2.5 rounded-xl bg-emerald-950/50 border border-emerald-500/40 text-xs md:text-sm text-emerald-300 font-semibold">
               {avisoActualizacion}
             </div>
           )}
 
           {esBovedaFamiliarActiva && !esCreadorPrincipal && (
-            <div className="max-w-6xl mx-auto px-4 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-[11px] text-cyan-200">
+            <div className="max-w-6xl mx-auto px-4 py-2.5 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs md:text-sm text-cyan-200">
               Acceso Familiar (Nivel 1 - Solo Ver): Puedes recorrer y ver todas las áreas del sistema
               operativo. El área de códigos permanece reservada hasta autorización expresa del Creador.
             </div>
@@ -180,28 +206,35 @@ export default function AreaOperacionesActiva({
 
           {verAreaCodigos && esCreadorPrincipal ? (
             <div className="max-w-5xl mx-auto bg-slate-900/70 border border-amber-500/40 rounded-2xl p-6 shadow-xl space-y-4">
-              <h2 className="text-sm font-bold text-amber-400 tracking-wider uppercase">
-                🔐 Área Reservada de Códigos y Configuración Maestra (Solo Creador)
+              <h1 className="text-xl md:text-2xl font-extrabold text-amber-400 tracking-wide uppercase">
+                🔐 Área Reservada de Códigos y Configuración Maestra
+              </h1>
+              <h2 className="text-sm md:text-base font-semibold text-amber-200">
+                Control exclusivo del Creador del sistema operativo
               </h2>
-              <p className="text-xs text-slate-300">
-                Módulo exclusivo para el Creador del sistema operativo. Las cuentas de Nivel 1 de la
-                bóveda familiar no acceden a esta vista sin autorización.
+              <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+                Desde este espacio administras la configuración maestra de Synapse-X (OSAI
+                Industrial). Las cuentas de Nivel 1 de la bóveda familiar no acceden a esta vista sin
+                tu autorización.
               </p>
             </div>
           ) : mostrarBovedaFamiliar ? (
             <BovedaFamiliarAC01 />
           ) : (
-            <div className="max-w-4xl mx-auto bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl space-y-4">
-              <h2 className="text-sm font-bold text-cyan-400 tracking-wider uppercase">
-                Consola de Operaciones - Estación {estacionActiva}
+            <div className="max-w-5xl mx-auto bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl space-y-4">
+              <h1 className="text-xl md:text-2xl font-extrabold text-cyan-400 tracking-wide uppercase">
+                Consola de Operaciones — Estación {estacionActiva}
+              </h1>
+              <h2 className="text-sm md:text-base font-semibold text-slate-200">
+                Entorno de trabajo activo y sesión persistente
               </h2>
-              <p className="text-xs text-slate-300 leading-relaxed">
+              <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
                 Bienvenido al entorno de trabajo unificado. La sesión se mantiene retenida de forma
-                persistente.
+                persistente para continuar operando sin interrupciones.
               </p>
-              <div className="p-4 rounded-xl bg-black/40 border border-slate-800 text-xs text-slate-400 font-mono">
-                <span className="text-emerald-400">ESTADO DE PERSISTENCIA:</span> Sesión blindada y
-                activa.
+              <div className="p-4 rounded-xl bg-black/40 border border-slate-800 text-xs md:text-sm text-slate-300 font-mono">
+                <span className="text-emerald-400 font-bold">ESTADO DE PERSISTENCIA:</span> Sesión
+                blindada y activa.
               </div>
             </div>
           )}
