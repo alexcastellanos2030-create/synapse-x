@@ -8,7 +8,7 @@
 //   ingenieros, técnicos y operadores.
 // ============================================================================
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   PortalTipo,
@@ -20,6 +20,7 @@ import {
   obtenerCredencialCreadorPorCedula,
 } from "./components/AreaCreador/BovedaCreadorMaster";
 import CreadorLogin from "./components/AreaCreador/CreadorLogin";
+import ConsolaPortalesCreador from "./components/AreaCreador/ConsolaPortalesCreador";
 import PortalAccesoSimpleLED from "./components/PortalAccesoSimpleLED";
 import AreaOperacionesActiva from "./components/AreaOperacionesActiva";
 
@@ -36,6 +37,35 @@ const CLAVES_LOCAL_SESION = [
   "synapse_boveda_familiar",
 ];
 
+interface EstadoSesionGuardada {
+  rol: string;
+  cedula: string;
+  nivel: string;
+  area: string;
+  estacion: string;
+  esBovedaFamiliar: boolean;
+}
+
+function persistirSesionLocal(datos: EstadoSesionGuardada): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("synapse_sesion_activa", "true");
+  localStorage.setItem("synapse_rol_activo", datos.rol);
+  localStorage.setItem("synapse_cedula_activa", datos.cedula);
+  localStorage.setItem("synapse_nivel_activo", datos.nivel);
+  localStorage.setItem("synapse_area_activa", datos.area);
+  localStorage.setItem("synapse_estacion_activa", datos.estacion);
+  localStorage.setItem(
+    "synapse_boveda_familiar",
+    datos.esBovedaFamiliar ? "true" : "false"
+  );
+}
+
+function limpiarSesionLocal(): void {
+  if (typeof window === "undefined") return;
+  CLAVES_SESION.forEach((clave) => localStorage.removeItem(clave));
+  CLAVES_LOCAL_SESION.forEach((clave) => localStorage.removeItem(clave));
+}
+
 export default function Home() {
   const [sesionLista, setSesionLista] = useState<boolean>(false);
   const [autenticado, setAutenticado] = useState<boolean>(false);
@@ -43,11 +73,14 @@ export default function Home() {
   const [cedulaActiva, setCedulaActiva] = useState<string>("");
   const [nivelActivo, setNivelActivo] = useState<string>("");
   const [esBovedaFamiliarActiva, setEsBovedaFamiliarActiva] = useState<boolean>(false);
+
   const [portalSeleccionado, setPortalSeleccionado] = useState<PortalTipo>("creador");
   const [areaActiva, setAreaActiva] = useState<string>("creador");
   const [estacionActiva, setEstacionActiva] = useState<string>("AC01");
+  const [mostrarConsolaPortales, setMostrarConsolaPortales] = useState<boolean>(true);
   const [avisoActualizacion, setAvisoActualizacion] = useState<string>("");
 
+  // 1. Restauración inicial de sesión desde localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -80,21 +113,17 @@ export default function Home() {
     }
   }, []);
 
+  // 2. Sincronización automática cuando cambia el estado autenticado
   useEffect(() => {
-    if (!sesionLista || typeof window === "undefined") return;
-
-    if (autenticado) {
-      localStorage.setItem("synapse_sesion_activa", "true");
-      localStorage.setItem("synapse_rol_activo", rolActivo);
-      localStorage.setItem("synapse_cedula_activa", cedulaActiva);
-      localStorage.setItem("synapse_nivel_activo", nivelActivo);
-      localStorage.setItem("synapse_area_activa", areaActiva);
-      localStorage.setItem("synapse_estacion_activa", estacionActiva);
-      localStorage.setItem(
-        "synapse_boveda_familiar",
-        esBovedaFamiliarActiva ? "true" : "false"
-      );
-    }
+    if (!sesionLista || !autenticado) return;
+    persistirSesionLocal({
+      rol: rolActivo,
+      cedula: cedulaActiva,
+      nivel: nivelActivo,
+      area: areaActiva,
+      estacion: estacionActiva,
+      esBovedaFamiliar: esBovedaFamiliarActiva,
+    });
   }, [
     sesionLista,
     autenticado,
@@ -106,109 +135,107 @@ export default function Home() {
     esBovedaFamiliarActiva,
   ]);
 
-  const handleLoginSuccess = async (
-    rol: string,
-    cedula: string,
-    nivel: string,
-    esBovedaFamiliar?: boolean
-  ) => {
-    const cedulaLimpia = String(cedula || "").trim();
-    const registroMaster = obtenerCredencialCreadorPorCedula(cedulaLimpia);
-    const nivelMasterTexto = registroMaster?.nivel ? String(registroMaster.nivel) : "";
+  const handleLoginSuccess = useCallback(
+    async (
+      rol: string,
+      cedula: string,
+      nivel: string,
+      esBovedaFamiliar?: boolean
+    ) => {
+      const cedulaLimpia = String(cedula || "").trim();
+      const registroMaster = obtenerCredencialCreadorPorCedula(cedulaLimpia);
+      const nivelMasterTexto = registroMaster?.nivel ? String(registroMaster.nivel) : "";
 
-    let perteneceBoveda =
-      Boolean(esBovedaFamiliar) ||
-      Boolean(registroMaster) ||
-      CEDULAS_MASTER_FAMILIA.has(cedulaLimpia);
+      let perteneceBoveda =
+        Boolean(esBovedaFamiliar) ||
+        Boolean(registroMaster) ||
+        CEDULAS_MASTER_FAMILIA.has(cedulaLimpia);
 
-    try {
-      const { data } = await supabase
-        .from("boveda_familiar")
-        .select("cedula")
-        .eq("cedula", cedulaLimpia)
-        .limit(1);
-      if (Array.isArray(data) && data.length > 0) {
-        perteneceBoveda = true;
+      try {
+        const { data } = await supabase
+          .from("boveda_familiar")
+          .select("cedula")
+          .eq("cedula", cedulaLimpia)
+          .limit(1);
+        if (Array.isArray(data) && data.length > 0) {
+          perteneceBoveda = true;
+        }
+      } catch {
+        // Mantiene validación previa si no hay red
       }
-    } catch {
-      // Mantiene validación previa si no hay red
-    }
 
-    let nuevaArea = "usuario";
-    let nuevaEstacion = "AU00";
-    let rolFinal = rol;
-    let nivelFinal = nivel || nivelMasterTexto || "Nivel 1";
+      let nuevaArea = "usuario";
+      let nuevaEstacion = "AU00";
+      let rolFinal = rol;
+      const nivelFinal = nivel || nivelMasterTexto || "Nivel 1";
 
-    if (perteneceBoveda || rol === "creador" || rol === "Creador") {
-      nuevaArea = "creador";
-      nuevaEstacion = "AC01";
-      rolFinal =
-        cedulaLimpia === "10433935" || registroMaster?.rol === "creador"
-          ? "creador"
-          : "superuser";
-      nivelFinal = nivelMasterTexto || nivelFinal;
-      perteneceBoveda = true;
-    } else if (rol === "ingeniero" || rol === "tecnico") {
-      nuevaArea = "st";
-      nuevaEstacion = "ST01";
-    } else {
-      nuevaArea = "usuario";
-      nuevaEstacion = "AU00";
-      rolFinal = "usuario";
-    }
+      if (perteneceBoveda || rol === "creador" || rol === "Creador") {
+        nuevaArea = "creador";
+        nuevaEstacion = "AC01";
+        rolFinal =
+          cedulaLimpia === "10433935" || registroMaster?.rol === "creador"
+            ? "creador"
+            : "superuser";
+        perteneceBoveda = true;
+      } else if (rol === "ingeniero" || rol === "tecnico") {
+        nuevaArea = "st";
+        nuevaEstacion = "ST01";
+      } else {
+        nuevaArea = "usuario";
+        nuevaEstacion = "AU00";
+        rolFinal = "usuario";
+      }
 
-    setRolActivo(rolFinal);
-    setCedulaActiva(cedulaLimpia);
-    setNivelActivo(nivelFinal);
-    setEsBovedaFamiliarActiva(perteneceBoveda);
-    setAreaActiva(nuevaArea);
-    setEstacionActiva(nuevaEstacion);
-    setAutenticado(true);
+      setRolActivo(rolFinal);
+      setCedulaActiva(cedulaLimpia);
+      setNivelActivo(nivelFinal);
+      setEsBovedaFamiliarActiva(perteneceBoveda);
+      setAreaActiva(nuevaArea);
+      setEstacionActiva(nuevaEstacion);
+      setAutenticado(true);
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem("synapse_sesion_activa", "true");
-      localStorage.setItem("synapse_rol_activo", rolFinal);
-      localStorage.setItem("synapse_cedula_activa", cedulaLimpia);
-      localStorage.setItem("synapse_nivel_activo", nivelFinal);
-      localStorage.setItem("synapse_area_activa", nuevaArea);
-      localStorage.setItem("synapse_estacion_activa", nuevaEstacion);
-      localStorage.setItem(
-        "synapse_boveda_familiar",
-        perteneceBoveda ? "true" : "false"
-      );
-    }
-  };
+      persistirSesionLocal({
+        rol: rolFinal,
+        cedula: cedulaLimpia,
+        nivel: nivelFinal,
+        area: nuevaArea,
+        estacion: nuevaEstacion,
+        esBovedaFamiliar: perteneceBoveda,
+      });
+    },
+    []
+  );
 
-  const handleCerrarSesion = () => {
+  const handleCerrarSesion = useCallback(() => {
     setAutenticado(false);
     setRolActivo("");
     setCedulaActiva("");
     setNivelActivo("");
     setEsBovedaFamiliarActiva(false);
     setAvisoActualizacion("");
-    if (typeof window !== "undefined") {
-      CLAVES_SESION.forEach((clave) => localStorage.removeItem(clave));
-      CLAVES_LOCAL_SESION.forEach((clave) => localStorage.removeItem(clave));
-    }
-  };
+    limpiarSesionLocal();
+  }, []);
 
-  const handleRefrescarEstado = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("synapse_sesion_activa", "true");
-      localStorage.setItem("synapse_rol_activo", rolActivo);
-      localStorage.setItem("synapse_cedula_activa", cedulaActiva);
-      localStorage.setItem("synapse_nivel_activo", nivelActivo);
-      localStorage.setItem("synapse_area_activa", areaActiva);
-      localStorage.setItem("synapse_estacion_activa", estacionActiva);
-      localStorage.setItem(
-        "synapse_boveda_familiar",
-        esBovedaFamiliarActiva ? "true" : "false"
-      );
-    }
+  const handleRefrescarEstado = useCallback(() => {
+    persistirSesionLocal({
+      rol: rolActivo,
+      cedula: cedulaActiva,
+      nivel: nivelActivo,
+      area: areaActiva,
+      estacion: estacionActiva,
+      esBovedaFamiliar: esBovedaFamiliarActiva,
+    });
     setAvisoActualizacion(
       `Vista actualizada (${new Date().toLocaleTimeString("es-CL")}). Sesión activa retenida.`
     );
-  };
+  }, [
+    rolActivo,
+    cedulaActiva,
+    nivelActivo,
+    areaActiva,
+    estacionActiva,
+    esBovedaFamiliarActiva,
+  ]);
 
   if (!sesionLista) {
     return (
@@ -225,7 +252,7 @@ export default function Home() {
           <div className="space-y-3">
             <div className="pb-2.5 border-b border-slate-800/80 text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-2">
-                <span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shrink-0"></span>
+                <span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
                 <h1 className="text-[11px] font-bold tracking-wider text-cyan-300 uppercase">
                   SYNAPSE-X OS
                 </h1>
@@ -293,19 +320,44 @@ export default function Home() {
     );
   }
 
+  const esAreaCreador = areaActiva === "creador" || esBovedaFamiliarActiva;
+
   return (
-    <AreaOperacionesActiva
-      rolActivo={rolActivo}
-      cedulaActiva={cedulaActiva}
-      nivelActivo={nivelActivo}
-      esBovedaFamiliarActiva={esBovedaFamiliarActiva}
-      areaActiva={areaActiva}
-      setAreaActiva={setAreaActiva}
-      estacionActiva={estacionActiva}
-      setEstacionActiva={setEstacionActiva}
-      avisoActualizacion={avisoActualizacion}
-      onRefrescarEstado={handleRefrescarEstado}
-      onCerrarSesion={handleCerrarSesion}
-    />
+    <div className="min-h-screen bg-[#030712] text-slate-100 font-mono">
+      <AreaOperacionesActiva
+        rolActivo={rolActivo}
+        cedulaActiva={cedulaActiva}
+        nivelActivo={nivelActivo}
+        esBovedaFamiliarActiva={esBovedaFamiliarActiva}
+        areaActiva={areaActiva}
+        setAreaActiva={setAreaActiva}
+        estacionActiva={estacionActiva}
+        setEstacionActiva={setEstacionActiva}
+        avisoActualizacion={avisoActualizacion}
+        onRefrescarEstado={handleRefrescarEstado}
+        onCerrarSesion={handleCerrarSesion}
+      />
+
+      {esAreaCreador && (
+        <section className="max-w-7xl mx-auto px-4 pb-8 pt-2 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 pt-3">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+              Módulos Nuevos AC00 · AC09 · AC10
+            </span>
+            <button
+              type="button"
+              onClick={() => setMostrarConsolaPortales((prev) => !prev)}
+              className="px-3 py-1 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-[11px] font-bold text-slate-200 cursor-pointer"
+            >
+              {mostrarConsolaPortales
+                ? "Ocultar Consola AC00/AC09/AC10"
+                : "Mostrar Consola AC00/AC09/AC10"}
+            </button>
+          </div>
+
+          {mostrarConsolaPortales && <ConsolaPortalesCreador />}
+        </section>
+      )}
+    </div>
   );
 }
