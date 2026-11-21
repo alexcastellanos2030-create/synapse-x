@@ -1,318 +1,329 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { DESCRIPCION_NIVELES, PerfilFamiliar } from '../BovedaFamiliarTipos';
+import React, { useMemo, useState } from "react";
 
-interface PestanaRegistroJerarquiaAC01Props {
-  perfiles: PerfilFamiliar[];
-  cargando: boolean;
+export type EstadoUsuarioBoveda = "activo" | "bloqueado";
+
+export interface UsuarioBoveda {
+  id: string;
   nombre: string;
-  setNombre: (v: string) => void;
-  cedula: string;
-  setCedula: (v: string) => void;
-  claveMaestra: string;
-  setClaveMaestra: (v: string) => void;
-  nivel: number;
-  setNivel: (v: number) => void;
-  notaAprendizaje: string;
-  setNotaAprendizaje: (v: string) => void;
-  onRegistrar: (e: React.FormEvent) => void;
-  onCambiarNivel: (cedulaObjetivo: string, nuevoNivel: number) => void;
-  onAbrirBitacora: (cedulaObjetivo: string) => void;
-  onToggleBloqueo: (cedulaObjetivo: string) => void;
+  nivel: number; // 1 al 10 (10 reservado para el Creador)
+  estado: EstadoUsuarioBoveda;
 }
 
-export default function PestanaRegistroJerarquiaAC01({
-  perfiles,
-  cargando,
-  nombre,
-  setNombre,
-  cedula,
-  setCedula,
-  claveMaestra,
-  setClaveMaestra,
-  nivel,
-  setNivel,
-  notaAprendizaje,
-  setNotaAprendizaje,
-  onRegistrar,
-  onCambiarNivel,
-  onAbrirBitacora,
-  onToggleBloqueo
-}: PestanaRegistroJerarquiaAC01Props) {
-  const [busquedaNombre, setBusquedaNombre] = useState<string>('');
+interface BovedaRegistroJerarquiaProps {
+  usuariosIniciales?: UsuarioBoveda[];
+  clavesAutorizadas?: string[];
+  onChangeUsuarios?: (usuarios: UsuarioBoveda[]) => void;
+}
 
-  const perfilesFiltrados = perfiles.filter((p) => {
-    const q = busquedaNombre.trim().toLowerCase();
-    if (!q) return true;
-    return p.nombre.toLowerCase().includes(q) || p.cedula.toLowerCase().includes(q);
-  });
+const DESCRIPCIONES_NIVEL: Record<number, string> = {
+  1: "Nivel 1 — Solo ver (inicio y observación básica)",
+  2: "Nivel 2 — Consulta ampliada de registros",
+  3: "Nivel 3 — Apoyo operativo inicial",
+  4: "Nivel 4 — Registro de datos básicos",
+  5: "Nivel 5 — Gestión operativa intermedia",
+  6: "Nivel 6 — Supervisión de procesos asignados",
+  7: "Nivel 7 — Coordinación avanzada de área",
+  8: "Nivel 8 — Control superior de bóveda",
+  9: "Nivel 9 — Máximo nivel asignable en registro",
+  10: "Nivel 10 — Nivel exclusivo del Creador",
+};
+
+const CLAVES_POR_DEFECTO = ["SYNAPSE10", "ALEX2026", "BOVEDA-MASTER"];
+
+export default function BovedaRegistroJerarquia({
+  usuariosIniciales,
+  clavesAutorizadas = CLAVES_POR_DEFECTO,
+  onChangeUsuarios,
+}: BovedaRegistroJerarquiaProps) {
+  const [usuarios, setUsuarios] = useState<UsuarioBoveda[]>(
+    usuariosIniciales ?? [
+      { id: "usr-1", nombre: "Alexander II Castellano Peroso", nivel: 10, estado: "activo" },
+      { id: "usr-2", nombre: "Alexander Castellano", nivel: 2, estado: "activo" },
+      { id: "usr-3", nombre: "Hija Uno", nivel: 5, estado: "activo" },
+    ]
+  );
+
+  // Estado para registro de nuevo usuario (niveles 1 a 9 disponibles en el selector)
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nivelInicial, setNivelInicial] = useState<number>(1);
+
+  // Casillas de selección (checklist) por usuario
+  const [seleccionados, setSeleccionados] = useState<Record<string, boolean>>({});
+
+  // Candados independientes por usuario y acción ("estado" = activar/bloquear, "eliminar" = borrar)
+  const [candadosAbiertos, setCandadosAbiertos] = useState<Record<string, boolean>>({});
+  const [modalClave, setModalClave] = useState<{
+    usuarioId: string;
+    accion: "estado" | "eliminar";
+  } | null>(null);
+  const [claveIngresada, setClaveIngresada] = useState("");
+  const [errorClave, setErrorClave] = useState("");
+
+  const actualizarLista = (siguiente: UsuarioBoveda[]) => {
+    setUsuarios(siguiente);
+    onChangeUsuarios?.(siguiente);
+  };
+
+  const toggleSeleccion = (id: string) => {
+    setSeleccionados((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const abrirCandado = (usuarioId: string, accion: "estado" | "eliminar") => {
+    const key = `${usuarioId}:${accion}`;
+    if (candadosAbiertos[key]) {
+      setCandadosAbiertos((prev) => ({ ...prev, [key]: false }));
+      return;
+    }
+    setErrorClave("");
+    setClaveIngresada("");
+    setModalClave({ usuarioId, accion });
+  };
+
+  const confirmarClave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalClave) return;
+    const valida = clavesAutorizadas.some(
+      (c) => c.trim().toUpperCase() === claveIngresada.trim().toUpperCase()
+    );
+    if (!valida) {
+      setErrorClave("Clave no autorizada. Verifica e intenta de nuevo.");
+      return;
+    }
+    const key = `${modalClave.usuarioId}:${modalClave.accion}`;
+    setCandadosAbiertos((prev) => ({ ...prev, [key]: true }));
+    setModalClave(null);
+    setClaveIngresada("");
+    setErrorClave("");
+  };
+
+  const alternarEstadoUsuario = (id: string) => {
+    const key = `${id}:estado`;
+    if (!candadosAbiertos[key]) return;
+    actualizarLista(
+      usuarios.map((u) =>
+        u.id === id ? { ...u, estado: u.estado === "activo" ? "bloqueado" : "activo" } : u
+      )
+    );
+  };
+
+  const eliminarUsuario = (id: string) => {
+    const key = `${id}:eliminar`;
+    if (!candadosAbiertos[key]) return;
+    actualizarLista(usuarios.filter((u) => u.id !== id));
+    setSeleccionados((prev) => {
+      const copia = { ...prev };
+      delete copia[id];
+      return copia;
+    });
+  };
+
+  const agregarUsuario = (e: React.FormEvent) => {
+    e.preventDefault();
+    const limpio = nuevoNombre.trim();
+    if (!limpio) return;
+    const nivelSeguro = Math.min(9, Math.max(1, nivelInicial));
+    const nuevo: UsuarioBoveda = {
+      id: `usr-${Date.now()}`,
+      nombre: limpio,
+      nivel: nivelSeguro,
+      estado: "activo",
+    };
+    actualizarLista([...usuarios, nuevo]);
+    setNuevoNombre("");
+  };
+
+  const usuariosOrdenados = useMemo(
+    () => [...usuarios].sort((a, b) => b.nivel - a.nivel),
+    [usuarios]
+  );
 
   return (
-    <div className="space-y-6">
-      <form
-        onSubmit={onRegistrar}
-        className="bg-black/40 border border-slate-800 rounded-xl p-5 space-y-4"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
-            + Registrar Integrante de Bóveda Familiar (Cargo: Superuser)
-          </h3>
-          <span className="text-[11px] text-slate-400">
-            Inicio recomendado: Nivel 1 (Solo Ver)
-          </span>
-        </div>
+    <div className="space-y-4 p-3 rounded border border-slate-800 bg-slate-950/80 text-xs">
+      {/* Formulario de Registro */}
+      <form onSubmit={agregarUsuario} className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <input
+          type="text"
+          value={nuevoNombre}
+          onChange={(e) => setNuevoNombre(e.target.value)}
+          placeholder="Nombre del usuario a registrar"
+          className="px-2.5 py-1.5 rounded border border-slate-700 bg-slate-900 text-slate-100"
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-          <div>
-            <label className="block text-slate-400 mb-1 uppercase">Nombre Completo:</label>
-            <input
-              type="text"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="Nombre y apellido"
-              className="w-full bg-[#030712] border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-              required
-            />
-          </div>
+        <select
+          value={nivelInicial}
+          onChange={(e) => setNivelInicial(Number(e.target.value))}
+          aria-label="Nivel inicial"
+          className="px-2.5 py-1.5 rounded border border-slate-700 bg-slate-900 text-slate-100"
+        >
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
+            <option key={lvl} value={lvl}>
+              {DESCRIPCIONES_NIVEL[lvl]}
+            </option>
+          ))}
+        </select>
 
-          <div>
-            <label className="block text-slate-400 mb-1 uppercase">Cédula de Identidad:</label>
-            <input
-              type="text"
-              value={cedula}
-              onChange={(e) => setCedula(e.target.value)}
-              placeholder="Solo números"
-              className="w-full bg-[#030712] border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-slate-400 mb-1 uppercase">Clave Maestra:</label>
-            <input
-              type="password"
-              value={claveMaestra}
-              onChange={(e) => setClaveMaestra(e.target.value)}
-              placeholder="••••••••••••"
-              className="w-full bg-[#030712] border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-slate-400 mb-1 uppercase">Nivel Inicial (1 al 9):</label>
-            <select
-              value={nivel}
-              onChange={(e) => setNivel(Number(e.target.value))}
-              className="w-full bg-[#030712] border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-bold focus:outline-none focus:border-emerald-500"
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                <option key={n} value={n}>
-                  {DESCRIPCION_NIVELES[n].titulo}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="text-xs">
-          <label className="block text-slate-400 mb-1 uppercase">
-            Meta / Observación de Aprendizaje (Opcional):
-          </label>
-          <input
-            type="text"
-            value={notaAprendizaje}
-            onChange={(e) => setNotaAprendizaje(e.target.value)}
-            placeholder="Ej: Observar módulos y recorrer portales en modo Solo Ver..."
-            className="w-full bg-[#030712] border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-2 border-t border-slate-800/80">
-          <div className="text-[11px] text-slate-400">
-            <span className="text-emerald-400 font-bold">Alcance seleccionado: </span>
-            {DESCRIPCION_NIVELES[nivel]?.detalle}
-          </div>
-          <button
-            type="submit"
-            className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-lg transition-all cursor-pointer shrink-0"
-          >
-            Guardar en Bóveda
-          </button>
-        </div>
+        <button
+          type="submit"
+          className="px-3 py-1.5 rounded bg-amber-500 text-slate-950 hover:bg-amber-400 cursor-pointer"
+        >
+          Agregar Usuario
+        </button>
       </form>
 
-      <div className="bg-black/40 border border-slate-800 rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-              Jerarquía Activa en Bóveda Familiar
-            </h3>
-            <span className="text-[11px] text-slate-400">
-              {perfilesFiltrados.length} de {perfiles.length} perfiles visibles
-            </span>
-          </div>
+      {/* Gestión de usuarios con checklist y microbotones con candadito */}
+      <div className="space-y-1.5">
+        {usuarios.map((u) => {
+          const estadoDesbloqueado = Boolean(candadosAbiertos[`${u.id}:estado`]);
+          const eliminarDesbloqueado = Boolean(candadosAbiertos[`${u.id}:eliminar`]);
+          const esActivo = u.estado === "activo";
 
-          <div className="relative w-full sm:w-72">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">
-              🔍
-            </span>
-            <input
-              type="text"
-              value={busquedaNombre}
-              onChange={(e) => setBusquedaNombre(e.target.value)}
-              placeholder="Buscar por nombre o cédula..."
-              aria-label="Buscar integrante por nombre"
-              className="w-full bg-[#030712] border border-slate-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
-            />
-            {busquedaNombre && (
-              <button
-                type="button"
-                onClick={() => setBusquedaNombre('')}
-                title="Limpiar búsqueda"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs cursor-pointer"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
+          return (
+            <div
+              key={u.id}
+              className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border border-slate-800 bg-slate-900/70"
+            >
+              <label className="flex items-center gap-2 cursor-pointer min-w-0">
+                <input
+                  type="checkbox"
+                  checked={Boolean(seleccionados[u.id])}
+                  onChange={() => toggleSeleccion(u.id)}
+                  className="w-3.5 h-3.5 cursor-pointer"
+                />
+                <span className="truncate">{u.nombre}</span>
+              </label>
 
-        {cargando ? (
-          <div className="p-6 text-center text-xs text-slate-400">Sincronizando bóveda...</div>
-        ) : perfilesFiltrados.length === 0 ? (
-          <div className="p-6 text-center text-xs text-slate-400">
-            No se encontraron integrantes que coincidan con &ldquo;{busquedaNombre}&rdquo;.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/70 text-[10px] uppercase text-slate-400">
-                  <th className="py-3 px-4">Integrante</th>
-                  <th className="py-3 px-4">Cédula</th>
-                  <th className="py-3 px-4">Cargo</th>
-                  <th className="py-3 px-4">Nivel y Alcance</th>
-                  <th className="py-3 px-4">Escalar Nivel (1–9)</th>
-                  <th className="py-3 px-4 text-right">Bitácora y Estado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/70">
-                {perfilesFiltrados.map((p) => {
-                  const esCreador = p.nivel === 10;
-                  const infoNivel = DESCRIPCION_NIVELES[p.nivel] || DESCRIPCION_NIVELES[1];
-                  return (
-                    <tr
-                      key={p.cedula}
-                      className={esCreador ? 'bg-emerald-950/20' : 'hover:bg-slate-900/40'}
-                    >
-                      <td className="py-3 px-4 font-bold text-white">
-                        {p.nombre}
-                        {esCreador && (
-                          <span className="ml-2 px-2 py-0.5 text-[10px] rounded bg-emerald-500 text-black font-extrabold">
-                            CREADOR
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-slate-300">{p.cedula}</td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            esCreador
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                          }`}
-                        >
-                          {esCreador ? 'Creador / Superuser' : 'Superuser'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-bold text-slate-100">{infoNivel.titulo}</span>
-                          <span
-                            className={`px-1.5 py-0.5 text-[9px] rounded font-bold ${
-                              infoNivel.puedeRegistrar
-                                ? 'bg-emerald-500/15 text-emerald-300'
-                                : 'bg-sky-500/15 text-sky-300'
-                            }`}
-                          >
-                            {infoNivel.modo}
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">{infoNivel.detalle}</div>
-                      </td>
-                      <td className="py-3 px-4">
-                        {esCreador ? (
-                          <span className="text-[11px] font-bold text-emerald-400">
-                            🔒 Nivel 10 Fijo (Acceso Total)
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => onCambiarNivel(p.cedula, p.nivel - 1)}
-                              disabled={p.nivel <= 1}
-                              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 font-bold cursor-pointer"
-                              title="Bajar un nivel"
-                            >
-                              -1
-                            </button>
-                            <select
-                              value={p.nivel}
-                              onChange={(e) => onCambiarNivel(p.cedula, Number(e.target.value))}
-                              className="bg-[#030712] border border-slate-700 rounded px-2 py-1 text-[11px] text-amber-300 font-bold focus:outline-none focus:border-emerald-500"
-                            >
-                              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                                <option key={n} value={n}>
-                                  Nivel {n}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              type="button"
-                              onClick={() => onCambiarNivel(p.cedula, p.nivel + 1)}
-                              disabled={p.nivel >= 9}
-                              className="px-2 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 disabled:opacity-40 text-emerald-300 font-bold cursor-pointer"
-                              title="Subir un nivel"
-                            >
-                              +1
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => onAbrirBitacora(p.cedula)}
-                          className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-amber-300 cursor-pointer"
-                        >
-                          Bitácora
-                        </button>
-                        {esCreador ? (
-                          <span className="text-[10px] text-emerald-400 font-bold">PROTEGIDO</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => onToggleBloqueo(p.cedula)}
-                            className={`px-3 py-1 rounded text-[10px] font-bold uppercase cursor-pointer ${
-                              p.bloqueado
-                                ? 'bg-red-500/20 text-red-300 border border-red-500/40'
-                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                            }`}
-                          >
-                            {p.bloqueado ? 'Bloqueado' : 'Activo'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Microbotón Activar / Bloquear (verde/rojo) + su candadito */}
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={!estadoDesbloqueado}
+                    onClick={() => alternarEstadoUsuario(u.id)}
+                    title={
+                      estadoDesbloqueado
+                        ? esActivo
+                          ? "Bloquear usuario"
+                          : "Activar usuario"
+                        : "Abre el candadito con tu clave para cambiar estado"
+                    }
+                    className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
+                      esActivo ? "bg-emerald-500 text-slate-950" : "bg-rose-600 text-white"
+                    } ${estadoDesbloqueado ? "cursor-pointer opacity-100" : "opacity-50 cursor-not-allowed"}`}
+                  >
+                    {esActivo ? "Activo" : "Bloqueado"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => abrirCandado(u.id, "estado")}
+                    title={
+                      estadoDesbloqueado
+                        ? "Cerrar candado de estado"
+                        : "Desbloquear candado de estado con clave"
+                    }
+                    aria-label="Candado de activar o bloquear"
+                    className="px-1.5 py-0.5 rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 cursor-pointer text-[11px]"
+                  >
+                    {estadoDesbloqueado ? "🔓" : "🔒"}
+                  </button>
+                </div>
+
+                {/* Microbotón Eliminar + su candadito */}
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={!eliminarDesbloqueado}
+                    onClick={() => eliminarUsuario(u.id)}
+                    title={
+                      eliminarDesbloqueado
+                        ? "Eliminar usuario"
+                        : "Abre el candadito con tu clave para eliminar"
+                    }
+                    className={`px-2 py-0.5 rounded text-[10px] bg-red-600 text-white ${
+                      eliminarDesbloqueado
+                        ? "hover:bg-red-500 cursor-pointer opacity-100"
+                        : "opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    Eliminar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => abrirCandado(u.id, "eliminar")}
+                    title={
+                      eliminarDesbloqueado
+                        ? "Cerrar candado de eliminación"
+                        : "Desbloquear candado de eliminación con clave"
+                    }
+                    aria-label="Candado de eliminar"
+                    className="px-1.5 py-0.5 rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 cursor-pointer text-[11px]"
+                  >
+                    {eliminarDesbloqueado ? "🔓" : "🔒"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
+
+      {/* Lista de Jerarquía Activa en Bóveda Familiar: solo muestra el número de nivel */}
+      <div className="pt-2 border-t border-slate-800 space-y-1">
+        <div className="text-[11px] text-slate-400">
+          Jerarquía activa en bóveda familiar (Nivel)
+        </div>
+        <div className="divide-y divide-slate-800/70 rounded border border-slate-800 bg-slate-900/40">
+          {usuariosOrdenados.map((u) => (
+            <div key={u.id} className="flex items-center justify-between px-2.5 py-1.5">
+              <span className="truncate">{u.nombre}</span>
+              <span className="num px-2 py-0.5 rounded bg-slate-800 text-amber-400">
+                {u.nivel}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Modal / panel de clave para abrir el candadito */}
+      {modalClave && (
+        <form
+          onSubmit={confirmarClave}
+          className="p-3 rounded border border-amber-500/40 bg-slate-900 space-y-2"
+        >
+          <div className="text-amber-300">
+            Ingresa una de tus claves registradas para abrir el candadito de{" "}
+            {modalClave.accion === "eliminar" ? "Eliminar" : "Activar / Bloquear"}:
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={claveIngresada}
+              onChange={(e) => setClaveIngresada(e.target.value)}
+              placeholder="Clave registrada"
+              autoFocus
+              className="flex-1 px-2.5 py-1 rounded border border-slate-700 bg-slate-950 text-slate-100"
+            />
+            <button
+              type="submit"
+              className="px-3 py-1 rounded bg-emerald-500 text-slate-950 cursor-pointer"
+            >
+              Liberar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setModalClave(null);
+                setErrorClave("");
+              }}
+              className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 cursor-pointer"
+            >
+              Cancelar
+            </button>
+          </div>
+          {errorClave && <div className="text-rose-400 text-[11px]">{errorClave}</div>}
+        </form>
+      )}
     </div>
   );
 }

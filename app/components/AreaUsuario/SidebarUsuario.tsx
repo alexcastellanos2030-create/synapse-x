@@ -28,6 +28,7 @@ import {
 
 export type TipoUsuarioSistema = "prueba" | "real";
 export type TemaSidebarUsuario = "claro" | "oscuro" | "sistema";
+export type AcentoBotonera = "amber" | "emerald" | "orange";
 
 interface SidebarUsuarioProps {
   areaActiva: "usuario" | "superuser" | "st" | "creador" | "codigo" | string;
@@ -40,6 +41,8 @@ interface SidebarUsuarioProps {
   setEstacionActiva: (estacion: string) => void;
   handleCerrarSesion: () => void;
   onRefrescarEstado?: () => void;
+  acentoColor?: AcentoBotonera;
+  onChangeAcento?: (color: AcentoBotonera) => void;
 }
 
 const CEDULAS_NUCLEO_FAMILIAR = new Set([
@@ -61,10 +64,17 @@ export default function SidebarUsuario({
   setEstacionActiva,
   handleCerrarSesion,
   onRefrescarEstado,
+  acentoColor = "amber",
+  onChangeAcento,
 }: SidebarUsuarioProps) {
   const [colapsado, setColapsado] = useState<boolean>(false);
   const [tema, setTema] = useState<TemaSidebarUsuario>("oscuro");
   const [sincronizando, setSincronizando] = useState<boolean>(false);
+
+  // Estados de LEDs de telemetría (vista completa para Creador y núcleo familiar)
+  const [ledRed] = useState<"green" | "yellow" | "red">("green");
+  const [ledAI] = useState<"green" | "yellow" | "red">("green");
+  const [ledAuth] = useState<"green" | "yellow" | "red">("green");
 
   const aplicarTemaGlobal = (modo: TemaSidebarUsuario) => {
     if (typeof window === "undefined") return;
@@ -110,7 +120,8 @@ export default function SidebarUsuario({
     Boolean(esBovedaFamiliarActiva) ||
     CEDULAS_NUCLEO_FAMILIAR.has(cedulaLimpia) ||
     rolLimpio === "creador" ||
-    rolLimpio === "superuser";
+    rolLimpio === "superuser" ||
+    rolLimpio === "hija";
 
   const esTecnicoOIngeniero =
     !esNucleoFamiliar &&
@@ -125,7 +136,7 @@ export default function SidebarUsuario({
     const todos = [
       {
         id: "usuario",
-        label: "Área de Usuario",
+        label: "AREA DE USUARIO",
         estacion: "AU00",
         icon: User,
         activoClase: "bg-purple-600/35 border-purple-400/60 text-purple-200",
@@ -133,7 +144,7 @@ export default function SidebarUsuario({
       },
       {
         id: "st",
-        label: "Área de Servicio Técnico",
+        label: "AREA DE SERVICIO TECNICO",
         estacion: "ST01",
         icon: Wrench,
         activoClase: "bg-cyan-600/35 border-cyan-400/60 text-cyan-200",
@@ -141,7 +152,7 @@ export default function SidebarUsuario({
       },
       {
         id: "creador",
-        label: "Área de Creador",
+        label: "AREA DE CREADOR",
         estacion: "AC01",
         icon: Crown,
         activoClase: "bg-amber-500/30 border-amber-400/60 text-amber-200",
@@ -149,7 +160,7 @@ export default function SidebarUsuario({
       },
       {
         id: "codigo",
-        label: "Área de Código",
+        label: "AREA DE CODIGO",
         estacion: "CD01",
         icon: Code2,
         activoClase: "bg-emerald-500/30 border-emerald-400/60 text-emerald-200",
@@ -196,6 +207,16 @@ export default function SidebarUsuario({
     }, 350);
   };
 
+  const getLedClasses = (color: "green" | "yellow" | "red") => {
+    if (color === "green") {
+      return "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]";
+    }
+    if (color === "yellow") {
+      return "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]";
+    }
+    return "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse";
+  };
+
   const estacionNormalizada = estacionActiva || "AU00";
   const gridColsAreas =
     botonesAreasVisibles.length === 4
@@ -210,24 +231,25 @@ export default function SidebarUsuario({
         colapsado ? "w-14" : "w-56"
       }`}
     >
-      {/* CABECERA COMPACTA */}
+      {/* CABECERA COMPACTA: SYNAPSE-X Y AREA DE USUARIO PARPADEANTE NEÓN */}
       <div className="px-2 py-1.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/40">
         <div className="flex items-center gap-1.5 overflow-hidden">
           <button
             type="button"
             onClick={() => setColapsado(!colapsado)}
-            className="p-1 rounded border border-purple-500/30 bg-purple-500/10 text-purple-400 transition-all cursor-pointer flex items-center justify-center shrink-0 hover:bg-purple-500/20"
+            className="p-1 rounded border border-fuchsia-500/40 bg-fuchsia-500/10 text-fuchsia-300 shadow-[0_0_10px_rgba(217,70,239,0.45)] transition-all cursor-pointer flex items-center justify-center shrink-0 hover:bg-fuchsia-500/20"
             title={colapsado ? "Desplegar barra" : "Contraer barra"}
           >
             <ChefHat className="w-3.5 h-3.5" />
           </button>
           {!colapsado && (
             <div className="truncate text-[10px] leading-tight">
-              <span className="text-white block truncate">
-                ÁREA USUARIO · AU00
+              <span className="text-white font-bold block truncate">
+                Synapse-X
               </span>
-              <span className="text-[10px] text-slate-400 block truncate">
-                {tipoUsuario}
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-fuchsia-300 drop-shadow-[0_0_8px_rgba(217,70,239,0.95)] animate-pulse truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_8px_rgba(232,121,249,1)] shrink-0" />
+                <span className="truncate">AREA DE USUARIO · {tipoUsuario}</span>
               </span>
             </div>
           )}
@@ -244,13 +266,8 @@ export default function SidebarUsuario({
         )}
       </div>
 
-      {/* PARTE SUPERIOR: ICONOS DE ÁREAS EN ORDEN FIJO (USUARIO -> SERVICIO TÉCNICO -> CREADOR -> CÓDIGO) */}
-      <div className="px-1.5 py-1 border-b border-slate-800 bg-slate-950/90 space-y-1">
-        {!colapsado && (
-          <span className="block text-[8px] uppercase tracking-wider text-slate-500 px-1 truncate">
-            Área de Usuario · Área de Servicio Técnico · Área de Creador
-          </span>
-        )}
+      {/* ICONOS DE ÁREAS EN ORDEN FIJO (USUARIO -> SERVICIO TÉCNICO -> CREADOR -> CÓDIGO) */}
+      <div className="px-1.5 py-1 border-b border-slate-800 bg-slate-950/90">
         <div className={`grid gap-1 ${colapsado ? "grid-cols-1" : gridColsAreas}`}>
           {botonesAreasVisibles.map((btn) => {
             const IconBtn = btn.icon;
@@ -360,8 +377,8 @@ export default function SidebarUsuario({
         </div>
       </div>
 
-      {/* PARTE INFERIOR: ACTUALIZAR SISTEMA + MICROICONOS DE TEMA + CERRAR SESIÓN */}
-      <div className="p-1.5 border-t border-slate-800 bg-slate-950/95 space-y-1 text-[10px] leading-tight">
+      {/* CONTENEDOR INFERIOR UNIFICADO */}
+      <div className="p-1.5 border-t border-slate-800 bg-slate-950/95 space-y-1.5 text-[10px] leading-tight">
         <button
           type="button"
           onClick={handleActualizarSistema}
@@ -403,6 +420,66 @@ export default function SidebarUsuario({
             );
           })}
         </div>
+
+        {/* LED + RB/AB/AS SOLO PARA CREADOR Y NÚCLEO FAMILIAR */}
+        {esNucleoFamiliar && !colapsado && (
+          <div className="space-y-1.5 pt-0.5">
+            <div className="bg-black/80 border border-slate-800/80 rounded p-1.5 space-y-1">
+              <span className="block text-[9px] uppercase tracking-wider text-slate-500">
+                LED // Telemetría
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${getLedClasses(ledRed)}`} />
+                <span className="text-[9px] text-slate-300 truncate">Red de Planta: OK</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${getLedClasses(ledAI)}`} />
+                <span className="text-[9px] text-slate-300 truncate">Motor AI-OS: Activo</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${getLedClasses(ledAuth)}`} />
+                <span className="text-[9px] text-slate-300 truncate">Sesión: Segura</span>
+              </div>
+            </div>
+
+            {onChangeAcento && (
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[9px] uppercase tracking-wider text-slate-500">
+                  Acento LED
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onChangeAcento("amber")}
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-400 text-black cursor-pointer ${
+                      acentoColor === "amber" ? "ring-1 ring-white" : "opacity-65 hover:opacity-100"
+                    }`}
+                  >
+                    RB
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChangeAcento("emerald")}
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-400 text-black cursor-pointer ${
+                      acentoColor === "emerald" ? "ring-1 ring-white" : "opacity-65 hover:opacity-100"
+                    }`}
+                  >
+                    AB
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChangeAcento("orange")}
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500 text-black cursor-pointer ${
+                      acentoColor === "orange" ? "ring-1 ring-white" : "opacity-65 hover:opacity-100"
+                    }`}
+                  >
+                    AS
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           type="button"

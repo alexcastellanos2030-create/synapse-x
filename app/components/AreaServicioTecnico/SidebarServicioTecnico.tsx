@@ -196,22 +196,23 @@ export default function SidebarServicioTecnico({
         colapsado ? "w-14" : "w-56"
       }`}
     >
-      {/* Cabecera compacta */}
+      {/* Cabecera compacta: Synapse-X y AREA DE SERVICIO TECNICO parpadeante neón */}
       <div className="p-2 border-b border-slate-800/80 flex items-center justify-between bg-black/40">
         {!colapsado && (
           <div className="flex flex-col min-w-0">
-            <span className="text-[11px] text-cyan-400 tracking-wider truncate">
-              SYNAPSE-X OS
+            <span className="text-[11px] font-bold text-white tracking-wider truncate">
+              Synapse-X
             </span>
-            <span className="text-[8px] text-slate-400 tracking-tight truncate">
-              Área de Servicio Técnico ({tipoUsuario})
+            <span className="inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider text-cyan-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.95)] animate-pulse truncate">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,1)] shrink-0" />
+              <span className="truncate">AREA DE SERVICIO TECNICO ({tipoUsuario})</span>
             </span>
           </div>
         )}
         <button
           type="button"
           onClick={() => setColapsado(!colapsado)}
-          className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 text-[10px] transition-colors cursor-pointer shrink-0"
+          className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/30 shadow-[0_0_8px_rgba(34,211,238,0.25)] text-[10px] transition-colors cursor-pointer shrink-0"
           title={colapsado ? "Desplegar barra" : "Colapsar barra"}
         >
           ⚙️
@@ -219,12 +220,7 @@ export default function SidebarServicioTecnico({
       </div>
 
       {/* Iconos de Áreas en orden fijo (Usuario -> Servicio Técnico -> Creador -> Código) */}
-      <div className="p-1.5 border-b border-slate-800/80 bg-slate-950/90 space-y-1">
-        {!colapsado && (
-          <span className="block text-[8px] uppercase tracking-wider text-slate-500 px-1 truncate">
-            Área de Usuario · Área de Servicio Técnico · Área de Creador
-          </span>
-        )}
+      <div className="p-1.5 border-b border-slate-800/80 bg-slate-950/90">
         <div className={`grid gap-1 ${gridColsAreas}`}>
           {botonesAreasVisibles.map((btn) => {
             const esActiva = areaActiva === btn.id;
@@ -286,7 +282,7 @@ export default function SidebarServicioTecnico({
         })}
       </div>
 
-      {/* Pie compacto: Actualizar, Tema (solo iconos), Telemetría y Cerrar Sesión */}
+      {/* Contenedor inferior unificado */}
       <div className="mt-auto border-t border-slate-800/80 bg-slate-950 p-1.5 space-y-1.5">
         <button
           type="button"
@@ -346,10 +342,11 @@ export default function SidebarServicioTecnico({
           </div>
         )}
 
-        {!colapsado && (
+        {/* Telemetría LED solo para núcleo familiar / creador */}
+        {esNucleoFamiliar && !colapsado && (
           <div className="bg-black/80 border border-slate-800/80 rounded p-1 space-y-0.5">
             <span className="block text-[7px] uppercase tracking-wider text-slate-500">
-              Telemetría del Sistema
+              LED // Telemetría del Sistema
             </span>
 
             <div className="flex items-center gap-1">

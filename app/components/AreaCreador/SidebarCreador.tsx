@@ -179,7 +179,7 @@ export default function SidebarCreador({
               onChangeArea("creador");
               setColapsada(false);
             }}
-            title="Área de Creador"
+            title="Área del Creador"
             className="p-2 text-base cursor-pointer rounded hover:bg-slate-900"
           >
             👑
@@ -204,29 +204,29 @@ export default function SidebarCreador({
 
   return (
     <aside className="w-64 shrink-0 bg-slate-950 border-r border-amber-500/20 flex flex-col h-full select-none transition-all duration-300">
-      {/* CABECERA CON NOMBRE DE MARCA Y BOTÓN DE COLAPSO */}
-      <div className="p-3 border-b border-amber-500/20 bg-black/40 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
-          <span className="text-xs text-amber-400 tracking-wider uppercase">
-            SYNAPSE-X OS
+      {/* CABECERA: SYNAPSE-X Y AREA DEL CREADOR PARPADEANTE NEÓN */}
+      <div className="p-3 border-b border-amber-500/20 bg-black/40 flex items-center justify-between gap-2">
+        <div className="flex flex-col min-w-0">
+          <span className="text-xs font-bold text-white tracking-wider truncate">
+            Synapse-X
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.95)] animate-pulse truncate">
+            <span className="h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,1)] shrink-0" />
+            <span className="truncate">AREA DEL CREADOR</span>
           </span>
         </div>
         <button
           type="button"
           onClick={() => setColapsada(true)}
           title="Ocultar Barra"
-          className="px-2 py-0.5 text-xs bg-slate-900 text-slate-300 hover:text-amber-400 rounded border border-slate-800 transition-colors cursor-pointer"
+          className="px-2 py-0.5 text-xs bg-slate-900 text-slate-300 hover:text-amber-400 rounded border border-slate-800 transition-colors cursor-pointer shrink-0"
         >
           ◀
         </button>
       </div>
 
       {/* BARRA DE ICONOS EN ORDEN FIJO: 1. USUARIO | 2. SERVICIO TÉCNICO | 3. CREADOR | 4. CÓDIGO */}
-      <div className="p-2 bg-black/60 border-b border-amber-500/20 shrink-0 space-y-1">
-        <div className="text-[9px] text-amber-400/80 px-0.5 uppercase tracking-wider truncate">
-          Área de Usuario · Área de Servicio Técnico · Área de Creador
-        </div>
+      <div className="p-2 bg-black/60 border-b border-amber-500/20 shrink-0">
         <div
           className={`grid ${
             esCreadorPrincipal ? "grid-cols-4" : "grid-cols-3"
@@ -262,12 +262,12 @@ export default function SidebarCreador({
             🛠️
           </button>
 
-          {/* 3. Tercero: Área de Creador */}
+          {/* 3. Tercero: Área del Creador */}
           <button
             type="button"
             onClick={() => onChangeArea("creador")}
-            title="Área de Creador"
-            aria-label="Área de Creador"
+            title="Área del Creador"
+            aria-label="Área del Creador"
             className={`py-1.5 flex items-center justify-center text-base rounded transition-all cursor-pointer ${
               areaActiva === "creador" && !verAreaCodigos
                 ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20"
@@ -321,7 +321,7 @@ export default function SidebarCreador({
         })}
       </div>
 
-      {/* SECCIÓN INFERIOR: 3 MICROBOTONES COMPACTOS (RB, AB, AS) + PANTALLA */}
+      {/* SECCIÓN INFERIOR: 3 MICROBOTONES COMPACTOS (RB, AB, AS) + PANTALLA + LED / CERRAR SESIÓN */}
       <div className="p-2.5 border-t border-amber-500/20 bg-black/80 space-y-1.5 shrink-0">
         <div className="grid grid-cols-3 gap-1">
           <button
@@ -404,7 +404,7 @@ export default function SidebarCreador({
         {/* ESTÉTICA LED Y CERRAR SESIÓN */}
         <div className="flex items-center justify-between pt-1 px-1">
           <div className="flex items-center space-x-1.5">
-            <span className="text-[11px] text-amber-400">LED</span>
+            <span className="text-[11px] text-amber-400 font-bold">LED</span>
             <div className="flex space-x-1">
               <span className="h-2 w-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500"></span>
               <span className="h-2 w-2 rounded-full bg-cyan-400"></span>
@@ -414,9 +414,10 @@ export default function SidebarCreador({
           <button
             type="button"
             onClick={handleCerrarSesion}
-            className="text-[11px] text-red-400 hover:text-red-300 underline uppercase cursor-pointer"
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-red-400 hover:text-red-300 uppercase cursor-pointer"
           >
-            Salir
+            <span>⏻</span>
+            <span>Cerrar sesión</span>
           </button>
         </div>
       </div>
