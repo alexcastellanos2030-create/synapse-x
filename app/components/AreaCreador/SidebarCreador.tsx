@@ -55,6 +55,9 @@ export default function SidebarCreador({
     { id: "AC05", label: "AC05 — Diagnóstico & Logs", icon: "📊" },
     { id: "AC06", label: "AC06 — Despliegue & Git", icon: "🚀" },
     { id: "AC07", label: "AC07 — Enlaces Maestros", icon: "🔗" },
+    { id: "AC08", label: "AC08 — Control Operativo", icon: "🎛️" },
+    { id: "AC09", label: "AC09 — Licencias & Custodia", icon: "🔐" },
+    { id: "AC10", label: "AC10 — Laboratorio Remoto", icon: "🔬" },
   ];
 
   const aplicarTemaEnDocumento = (modo: ModoPantallaSidebar) => {
@@ -232,7 +235,6 @@ export default function SidebarCreador({
             esCreadorPrincipal ? "grid-cols-4" : "grid-cols-3"
           } gap-1.5`}
         >
-          {/* 1. Izquierda: Área de Usuario */}
           <button
             type="button"
             onClick={() => onChangeArea("usuario")}
@@ -247,7 +249,6 @@ export default function SidebarCreador({
             🏭
           </button>
 
-          {/* 2. Segundo: Área de Servicio Técnico */}
           <button
             type="button"
             onClick={() => onChangeArea("st")}
@@ -262,7 +263,6 @@ export default function SidebarCreador({
             🛠️
           </button>
 
-          {/* 3. Tercero: Área del Creador */}
           <button
             type="button"
             onClick={() => onChangeArea("creador")}
@@ -277,7 +277,6 @@ export default function SidebarCreador({
             👑
           </button>
 
-          {/* 4. Derecha: Área de Código */}
           {esCreadorPrincipal && (
             <button
               type="button"
@@ -296,10 +295,10 @@ export default function SidebarCreador({
         </div>
       </div>
 
-      {/* LISTA DE PORTALES AC00 - AC07 CON TAMAÑO DE LETRA UNIFICADO */}
+      {/* LISTA DE PORTALES AC00 - AC10 CON TAMAÑO DE LETRA UNIFICADO */}
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
         <div className="text-[11px] text-amber-400/90 px-2 py-1 uppercase tracking-wider">
-          Portales AC00 - AC07
+          Portales AC00 - AC10
         </div>
         {portalesCreador.map((portal) => {
           const activo = estacionActiva === portal.id;

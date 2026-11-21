@@ -26,6 +26,7 @@ import AreaOperacionesActiva from "./components/AreaOperacionesActiva";
 
 const ORDEN_PORTALES: PortalTipo[] = ["creador", "ingeniero", "tecnico", "usuario"];
 const CEDULAS_MASTER_FAMILIA = new Set<string>(Object.keys(CREADOR_MASTER_DATABASE));
+const ESTACIONES_CONSOLA_NUEVA = new Set<string>(["AC00", "AC09", "AC10"]);
 
 const CLAVES_LOCAL_SESION = [
   "synapse_sesion_activa",
@@ -77,7 +78,6 @@ export default function Home() {
   const [portalSeleccionado, setPortalSeleccionado] = useState<PortalTipo>("creador");
   const [areaActiva, setAreaActiva] = useState<string>("creador");
   const [estacionActiva, setEstacionActiva] = useState<string>("AC01");
-  const [mostrarConsolaPortales, setMostrarConsolaPortales] = useState<boolean>(true);
   const [avisoActualizacion, setAvisoActualizacion] = useState<string>("");
 
   // 1. Restauración inicial de sesión desde localStorage
@@ -320,7 +320,8 @@ export default function Home() {
     );
   }
 
-  const esAreaCreador = areaActiva === "creador" || esBovedaFamiliarActiva;
+  const mostrarConsolaPorSidebar =
+    areaActiva === "creador" && ESTACIONES_CONSOLA_NUEVA.has(estacionActiva);
 
   return (
     <div className="min-h-screen bg-[#030712] text-slate-100 font-mono">
@@ -338,24 +339,11 @@ export default function Home() {
         onCerrarSesion={handleCerrarSesion}
       />
 
-      {esAreaCreador && (
-        <section className="max-w-7xl mx-auto px-4 pb-8 pt-2 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 pt-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
-              Módulos Nuevos AC00 · AC09 · AC10
-            </span>
-            <button
-              type="button"
-              onClick={() => setMostrarConsolaPortales((prev) => !prev)}
-              className="px-3 py-1 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-[11px] font-bold text-slate-200 cursor-pointer"
-            >
-              {mostrarConsolaPortales
-                ? "Ocultar Consola AC00/AC09/AC10"
-                : "Mostrar Consola AC00/AC09/AC10"}
-            </button>
-          </div>
-
-          {mostrarConsolaPortales && <ConsolaPortalesCreador />}
+      {mostrarConsolaPorSidebar && (
+        <section className="max-w-7xl mx-auto px-4 pb-8 pt-2">
+          <ConsolaPortalesCreador
+            vistaInicial={estacionActiva as "AC00" | "AC09" | "AC10"}
+          />
         </section>
       )}
     </div>
