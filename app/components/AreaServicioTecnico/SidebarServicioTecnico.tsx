@@ -22,6 +22,8 @@ const CEDULAS_NUCLEO_FAMILIAR = new Set([
   "33323644",
 ]);
 
+const MODO_PANTALLA_KEY = "synapse_modo_pantalla_v1";
+
 export default function SidebarServicioTecnico({
   areaActiva,
   onChangeArea,
@@ -41,12 +43,15 @@ export default function SidebarServicioTecnico({
   const [ledAI] = useState<"green" | "yellow" | "red">("green");
   const [ledAuth] = useState<"green" | "yellow" | "red">("green");
 
-  useEffect(() => {
+  const aplicarTemaGlobal = (modo: "oscuro" | "claro" | "sistema") => {
+    if (typeof window === "undefined") return;
     const root = document.documentElement;
-    if (tema === "claro") {
+    root.setAttribute("data-synapse-theme", modo);
+
+    if (modo === "claro") {
       root.classList.remove("dark");
       root.style.colorScheme = "light";
-    } else if (tema === "oscuro") {
+    } else if (modo === "oscuro") {
       root.classList.add("dark");
       root.style.colorScheme = "dark";
     } else {
@@ -54,7 +59,26 @@ export default function SidebarServicioTecnico({
       root.classList.toggle("dark", prefiereOscuro);
       root.style.colorScheme = prefiereOscuro ? "dark" : "light";
     }
-  }, [tema]);
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const guardado = localStorage.getItem(MODO_PANTALLA_KEY) as "oscuro" | "claro" | "sistema" | null;
+    if (guardado && ["claro", "oscuro", "sistema"].includes(guardado)) {
+      setTema(guardado);
+      aplicarTemaGlobal(guardado);
+    } else {
+      aplicarTemaGlobal("oscuro");
+    }
+  }, []);
+
+  const seleccionarTema = (modo: "oscuro" | "claro" | "sistema") => {
+    setTema(modo);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(MODO_PANTALLA_KEY, modo);
+      aplicarTemaGlobal(modo);
+    }
+  };
 
   const handleActualizar = () => {
     setActualizando(true);
@@ -80,8 +104,8 @@ export default function SidebarServicioTecnico({
       rolLimpio === "st" ||
       rolLimpio === "servicio_tecnico");
 
-  // Siempre construimos los 4 botones de área; se habilitan o restringen según rol/jerarquía
-  const botonesAreas = [
+  // Orden estándar: 1. Usuario (izq), 2. Servicio Técnico, 3. Creador, 4. Código (der)
+  const todosBotonesAreas = [
     {
       id: "usuario",
       label: "Área de Usuario",
@@ -111,6 +135,13 @@ export default function SidebarServicioTecnico({
       habilitado: esNucleoFamiliar,
     },
   ];
+
+  // Empleados: 1 icono (Usuario) | ST/Ingenieros: 2 iconos (Usuario, ST) | Núcleo Familiar: 4 iconos
+  const botonesAreasVisibles = esNucleoFamiliar
+    ? todosBotonesAreas
+    : esPersonalST
+    ? todosBotonesAreas.slice(0, 2)
+    : todosBotonesAreas.slice(0, 1);
 
   const estacionesST = [
     { id: "ST01", label: "ST01: Panel Central ST" },
@@ -151,6 +182,14 @@ export default function SidebarServicioTecnico({
     onChangeArea(idArea);
   };
 
+  const gridColsAreas = colapsado
+    ? "grid-cols-1"
+    : botonesAreasVisibles.length === 4
+    ? "grid-cols-4"
+    : botonesAreasVisibles.length === 2
+    ? "grid-cols-2"
+    : "grid-cols-1";
+
   return (
     <aside
       className={`h-full bg-slate-950 border-r border-slate-800/80 flex flex-col transition-all duration-300 select-none ${
@@ -161,10 +200,10 @@ export default function SidebarServicioTecnico({
       <div className="p-2 border-b border-slate-800/80 flex items-center justify-between bg-black/40">
         {!colapsado && (
           <div className="flex flex-col min-w-0">
-            <span className="font-mono text-[11px] font-bold text-cyan-400 tracking-wider truncate">
+            <span className="text-[11px] text-cyan-400 tracking-wider truncate">
               SYNAPSE-X OS
             </span>
-            <span className="font-mono text-[8px] text-slate-400 tracking-tight truncate">
+            <span className="text-[8px] text-slate-400 tracking-tight truncate">
               Área de Servicio Técnico ({tipoUsuario})
             </span>
           </div>
@@ -179,19 +218,15 @@ export default function SidebarServicioTecnico({
         </button>
       </div>
 
-      {/* 4 botones de Áreas arriba en fila (iconos siempre visibles) */}
+      {/* Iconos de Áreas en orden fijo (Usuario -> Servicio Técnico -> Creador -> Código) */}
       <div className="p-1.5 border-b border-slate-800/80 bg-slate-950/90 space-y-1">
         {!colapsado && (
-          <span className="block text-[8px] font-mono uppercase tracking-wider text-slate-500 px-1">
-            Áreas del Sistema
+          <span className="block text-[8px] uppercase tracking-wider text-slate-500 px-1 truncate">
+            Área de Usuario · Área de Servicio Técnico · Área de Creador
           </span>
         )}
-        <div
-          className={`grid gap-1 ${
-            colapsado ? "grid-cols-1" : "grid-cols-4"
-          }`}
-        >
-          {botonesAreas.map((btn) => {
+        <div className={`grid gap-1 ${gridColsAreas}`}>
+          {botonesAreasVisibles.map((btn) => {
             const esActiva = areaActiva === btn.id;
             return (
               <button
@@ -201,9 +236,9 @@ export default function SidebarServicioTecnico({
                 onClick={() => handleSeleccionArea(btn.id, btn.habilitado, btn.estacion)}
                 title={btn.habilitado ? btn.label : `${btn.label} (Restringido)`}
                 aria-label={btn.label}
-                className={`h-7 rounded font-mono text-[11px] transition-all flex items-center justify-center ${
+                className={`h-7 rounded text-[11px] transition-all flex items-center justify-center ${
                   esActiva
-                    ? "bg-cyan-500/25 text-cyan-300 border border-cyan-400/60 font-bold cursor-pointer"
+                    ? "bg-cyan-500/25 text-cyan-300 border border-cyan-400/60 cursor-pointer"
                     : btn.habilitado
                     ? "bg-slate-900/80 text-slate-200 hover:bg-slate-800 border border-slate-800 cursor-pointer"
                     : "bg-slate-950/50 text-slate-600 border border-slate-900 opacity-40 cursor-not-allowed"
@@ -219,13 +254,13 @@ export default function SidebarServicioTecnico({
       {/* Estaciones ST y mensaje de bienvenida */}
       <div className="flex-1 overflow-y-auto p-1.5 space-y-1 custom-scrollbar">
         {!colapsado && (
-          <div className="px-1.5 py-1 rounded bg-slate-900/60 border border-slate-800/70 text-[8px] font-mono text-slate-400 leading-tight">
+          <div className="px-1.5 py-1 rounded bg-slate-900/60 border border-slate-800/70 text-[8px] text-slate-400 leading-tight">
             Bienvenido al entorno de trabajo unificado. La sesión se mantiene retenida de forma ininterrumpida.
           </div>
         )}
 
         {!colapsado && (
-          <span className="block text-[8px] font-mono uppercase tracking-wider text-slate-500 px-1 pt-1">
+          <span className="block text-[8px] uppercase tracking-wider text-slate-500 px-1 pt-1">
             Estaciones ST ({estacionesVisibles.length})
           </span>
         )}
@@ -237,9 +272,9 @@ export default function SidebarServicioTecnico({
               key={est.id}
               type="button"
               onClick={() => setEstacionActiva(est.id)}
-              className={`w-full text-left px-2 py-1 rounded font-mono text-[9px] transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`w-full text-left px-2 py-1 rounded text-[9px] transition-all cursor-pointer flex items-center gap-1.5 ${
                 activo
-                  ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold"
+                  ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
                   : "text-slate-400 hover:bg-slate-900/80 hover:text-slate-200 border border-transparent"
               }`}
               title={est.label}
@@ -257,7 +292,7 @@ export default function SidebarServicioTecnico({
           type="button"
           onClick={handleActualizar}
           disabled={actualizando}
-          className="w-full flex items-center justify-center gap-1 px-1.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[8px] font-mono font-semibold text-slate-200 transition-all cursor-pointer"
+          className="w-full flex items-center justify-center gap-1 px-1.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[8px] text-slate-200 transition-all cursor-pointer"
         >
           <span className={actualizando ? "animate-spin inline-block" : ""}>🔄</span>
           {!colapsado && (
@@ -271,12 +306,12 @@ export default function SidebarServicioTecnico({
           <div className="grid grid-cols-3 gap-1 bg-black/80 px-1 py-0.5 rounded border border-slate-800/90">
             <button
               type="button"
-              onClick={() => setTema("claro")}
+              onClick={() => seleccionarTema("claro")}
               title="Tema claro"
               aria-label="Tema claro"
               className={`py-0.5 rounded text-[10px] leading-none transition-all cursor-pointer flex items-center justify-center ${
                 tema === "claro"
-                  ? "bg-cyan-500 text-black font-bold"
+                  ? "bg-cyan-500 text-black"
                   : "text-slate-400 hover:text-white"
               }`}
             >
@@ -284,12 +319,12 @@ export default function SidebarServicioTecnico({
             </button>
             <button
               type="button"
-              onClick={() => setTema("oscuro")}
+              onClick={() => seleccionarTema("oscuro")}
               title="Tema oscuro"
               aria-label="Tema oscuro"
               className={`py-0.5 rounded text-[10px] leading-none transition-all cursor-pointer flex items-center justify-center ${
                 tema === "oscuro"
-                  ? "bg-cyan-500 text-black font-bold"
+                  ? "bg-cyan-500 text-black"
                   : "text-slate-400 hover:text-white"
               }`}
             >
@@ -297,12 +332,12 @@ export default function SidebarServicioTecnico({
             </button>
             <button
               type="button"
-              onClick={() => setTema("sistema")}
+              onClick={() => seleccionarTema("sistema")}
               title="Tema del sistema"
               aria-label="Tema del sistema"
               className={`py-0.5 rounded text-[10px] leading-none transition-all cursor-pointer flex items-center justify-center ${
                 tema === "sistema"
-                  ? "bg-cyan-500 text-black font-bold"
+                  ? "bg-cyan-500 text-black"
                   : "text-slate-400 hover:text-white"
               }`}
             >
@@ -313,7 +348,7 @@ export default function SidebarServicioTecnico({
 
         {!colapsado && (
           <div className="bg-black/80 border border-slate-800/80 rounded p-1 space-y-0.5">
-            <span className="block text-[7px] font-mono uppercase tracking-wider text-slate-500">
+            <span className="block text-[7px] uppercase tracking-wider text-slate-500">
               Telemetría del Sistema
             </span>
 
@@ -325,7 +360,7 @@ export default function SidebarServicioTecnico({
                     : "bg-amber-400"
                 }`}
               />
-              <span className="text-[8px] font-mono text-slate-300 truncate">
+              <span className="text-[8px] text-slate-300 truncate">
                 {ledRed === "green" ? "Red Planta: Estable OK" : "Red Planta: Advertencia"}
               </span>
             </div>
@@ -338,7 +373,7 @@ export default function SidebarServicioTecnico({
                     : "bg-amber-400"
                 }`}
               />
-              <span className="text-[8px] font-mono text-slate-300 truncate">
+              <span className="text-[8px] text-slate-300 truncate">
                 {ledAI === "green" ? "Motor AI-OS: Operativo" : "Motor AI-OS: Pausa"}
               </span>
             </div>
@@ -351,7 +386,7 @@ export default function SidebarServicioTecnico({
                     : "bg-amber-400"
                 }`}
               />
-              <span className="text-[8px] font-mono text-slate-300 truncate">
+              <span className="text-[8px] text-slate-300 truncate">
                 {ledAuth === "green" ? "Seguridad Sesión: Segura" : "Seguridad Sesión: Alerta"}
               </span>
             </div>
@@ -361,7 +396,7 @@ export default function SidebarServicioTecnico({
         <button
           type="button"
           onClick={handleCerrarSesion}
-          className="w-full flex items-center justify-center gap-1 px-1.5 py-1 rounded bg-red-950/50 hover:bg-red-900/70 border border-red-800/60 text-[8px] font-mono font-bold text-red-300 transition-all cursor-pointer"
+          className="w-full flex items-center justify-center gap-1 px-1.5 py-1 rounded bg-red-950/50 hover:bg-red-900/70 border border-red-800/60 text-[8px] text-red-300 transition-all cursor-pointer"
         >
           <span>⏻</span>
           {!colapsado && <span className="truncate">CERRAR SESIÓN</span>}

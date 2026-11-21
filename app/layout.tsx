@@ -1,4 +1,5 @@
 import './globals.css';
+import './Synapse-X-Thema-Global.css';
 
 export const metadata = {
   title: 'SYNAPSE-X OS',
@@ -18,8 +19,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className="h-full">
-      <body className="bg-[#0b0f19] text-slate-200 antialiased w-full min-h-screen overflow-x-hidden flex flex-col">
+    <html
+      lang="es"
+      data-synapse-theme="oscuro"
+      suppressHydrationWarning
+      className="h-full dark"
+    >
+      <body className="antialiased w-full min-h-screen overflow-x-hidden flex flex-col">
         {children}
       </body>
     </html>

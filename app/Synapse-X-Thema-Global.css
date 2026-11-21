@@ -1,0 +1,138 @@
+/* ==========================================================================
+   SYNAPSE-X OS (OSAI INDUSTRIAL) — Synapse-X-Thema-Global.css
+   - Letra compacta y uniforme en cualquier dispositivo
+   - Solo títulos en negrita; subtítulos normales resaltados; resto normal
+   - Números uniformes de ancho fijo en todo el sistema
+   - Sincronizado con data-synapse-theme ("oscuro" por defecto, "claro", "sistema")
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --sx-font-texto: 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --sx-font-numero: 'JetBrains Mono', 'Cascadia Mono', 'Consolas', 'Courier New', monospace;
+
+  /* TEMA OSCURO GLOBAL (Por defecto) */
+  --sx-bg: #0b0f17;
+  --sx-panel: #121824;
+  --sx-sidebar: #070a10;
+  --sx-texto: #e6edf3;
+  --sx-texto-suave: #9fb0c3;
+  --sx-subtitulo: #38bdf8;
+  --sx-titulo: #f59e0b;
+  --sx-campo-bg: #0e1420;
+  --sx-borde: rgba(245, 158, 11, 0.28);
+}
+
+/* TEMA CLARO */
+html[data-synapse-theme="claro"],
+body[data-synapse-theme="claro"],
+html:not(.dark)[data-synapse-theme="claro"] {
+  --sx-bg: #f1f5f9;
+  --sx-panel: #ffffff;
+  --sx-sidebar: #1e293b;
+  --sx-texto: #0f172a;
+  --sx-texto-suave: #475569;
+  --sx-subtitulo: #0284c7;
+  --sx-titulo: #0f172a;
+  --sx-campo-bg: #f8fafc;
+  --sx-borde: #cbd5e1;
+}
+
+/* TEMA SISTEMA (Modo claro si el equipo prefiere claro) */
+@media (prefers-color-scheme: light) {
+  html[data-synapse-theme="sistema"],
+  body[data-synapse-theme="sistema"] {
+    --sx-bg: #f1f5f9;
+    --sx-panel: #ffffff;
+    --sx-sidebar: #1e293b;
+    --sx-texto: #0f172a;
+    --sx-texto-suave: #475569;
+    --sx-subtitulo: #0284c7;
+    --sx-titulo: #0f172a;
+    --sx-campo-bg: #f8fafc;
+    --sx-borde: #cbd5e1;
+  }
+}
+
+/* Letra compacta y uniforme en todos los elementos y campos */
+html,
+body,
+aside,
+main,
+section,
+article,
+header,
+footer,
+nav,
+div,
+button,
+input,
+select,
+textarea,
+label,
+p,
+span,
+a,
+li,
+td,
+th {
+  font-family: var(--sx-font-texto) !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Únicamente títulos en negrita */
+h1,
+.titulo-principal,
+[data-titulo="principal"] {
+  font-weight: 700 !important;
+  color: var(--sx-titulo) !important;
+  letter-spacing: -0.005em;
+  line-height: 1.12;
+}
+
+/* Subtítulos en peso normal pero resaltados */
+h2,
+h3,
+.subtitulo,
+[data-subtitulo="resaltado"] {
+  font-weight: 400 !important;
+  color: var(--sx-subtitulo) !important;
+  letter-spacing: 0.02em;
+}
+
+/* Campos de formulario y controles uniformes */
+input,
+select,
+textarea {
+  font-weight: 400 !important;
+  background-color: var(--sx-campo-bg) !important;
+  color: var(--sx-texto) !important;
+  border-color: var(--sx-borde) !important;
+}
+
+/* Números uniformes de ancho fijo en todo el sistema */
+.num,
+.numero,
+.kpi,
+.contador,
+input[type="number"],
+td.numeric,
+time,
+[data-numero="uniforme"] {
+  font-family: var(--sx-font-numero) !important;
+  font-variant-numeric: tabular-nums !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.02em;
+}
+
+/* Fondo global unificado */
+body {
+  background-color: var(--sx-bg) !important;
+  color: var(--sx-texto) !important;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}

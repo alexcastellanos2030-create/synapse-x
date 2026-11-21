@@ -31,7 +31,7 @@ export type TemaSidebarUsuario = "claro" | "oscuro" | "sistema";
 
 interface SidebarUsuarioProps {
   areaActiva: "usuario" | "superuser" | "st" | "creador" | "codigo" | string;
-  onChangeArea: (area: any) => void;
+  onChangeArea: (area: "usuario" | "superuser" | "st" | "creador" | "codigo" | string) => void;
   rolActivo: string;
   cedulaActiva?: string;
   esBovedaFamiliarActiva?: boolean;
@@ -47,6 +47,8 @@ const CEDULAS_NUCLEO_FAMILIAR = new Set([
   "279276795",
   "33323644",
 ]);
+
+const MODO_PANTALLA_KEY = "synapse_modo_pantalla_v1";
 
 export default function SidebarUsuario({
   areaActiva,
@@ -64,13 +66,15 @@ export default function SidebarUsuario({
   const [tema, setTema] = useState<TemaSidebarUsuario>("oscuro");
   const [sincronizando, setSincronizando] = useState<boolean>(false);
 
-  useEffect(() => {
+  const aplicarTemaGlobal = (modo: TemaSidebarUsuario) => {
     if (typeof window === "undefined") return;
     const root = document.documentElement;
-    if (tema === "claro") {
+    root.setAttribute("data-synapse-theme", modo);
+
+    if (modo === "claro") {
       root.classList.remove("dark");
       root.style.colorScheme = "light";
-    } else if (tema === "oscuro") {
+    } else if (modo === "oscuro") {
       root.classList.add("dark");
       root.style.colorScheme = "dark";
     } else {
@@ -78,7 +82,26 @@ export default function SidebarUsuario({
       root.classList.toggle("dark", prefiereOscuro);
       root.style.colorScheme = prefiereOscuro ? "dark" : "light";
     }
-  }, [tema]);
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const guardado = localStorage.getItem(MODO_PANTALLA_KEY) as TemaSidebarUsuario | null;
+    if (guardado && ["claro", "oscuro", "sistema"].includes(guardado)) {
+      setTema(guardado);
+      aplicarTemaGlobal(guardado);
+    } else {
+      aplicarTemaGlobal("oscuro");
+    }
+  }, []);
+
+  const seleccionarTema = (modo: TemaSidebarUsuario) => {
+    setTema(modo);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(MODO_PANTALLA_KEY, modo);
+      aplicarTemaGlobal(modo);
+    }
+  };
 
   const cedulaLimpia = String(cedulaActiva || "").trim();
   const rolLimpio = String(rolActivo || "").toLowerCase().trim();
@@ -97,7 +120,7 @@ export default function SidebarUsuario({
       rolLimpio === "st" ||
       rolLimpio === "servicio_tecnico");
 
-  // Solo el núcleo familiar ve los 4 botones; técnicos/ingenieros ven 2; empleados ven 1
+  // Orden estándar: 1. Usuario (izq), 2. Servicio Técnico, 3. Creador, 4. Código (der)
   const botonesAreasVisibles = (() => {
     const todos = [
       {
@@ -110,7 +133,7 @@ export default function SidebarUsuario({
       },
       {
         id: "st",
-        label: "Servicio Técnico",
+        label: "Área de Servicio Técnico",
         estacion: "ST01",
         icon: Wrench,
         activoClase: "bg-cyan-600/35 border-cyan-400/60 text-cyan-200",
@@ -183,7 +206,7 @@ export default function SidebarUsuario({
 
   return (
     <aside
-      className={`bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 select-none transition-all duration-300 relative z-40 font-mono text-[10px] leading-tight ${
+      className={`bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 select-none transition-all duration-300 relative z-40 text-[10px] leading-tight ${
         colapsado ? "w-14" : "w-56"
       }`}
     >
@@ -200,7 +223,7 @@ export default function SidebarUsuario({
           </button>
           {!colapsado && (
             <div className="truncate text-[10px] leading-tight">
-              <span className="font-semibold text-white block truncate">
+              <span className="text-white block truncate">
                 ÁREA USUARIO · AU00
               </span>
               <span className="text-[10px] text-slate-400 block truncate">
@@ -221,8 +244,13 @@ export default function SidebarUsuario({
         )}
       </div>
 
-      {/* PARTE SUPERIOR: MICROICONOS DE ÁREAS (SOLO ICONO, SIN TEXTO) */}
-      <div className="px-1.5 py-1 border-b border-slate-800 bg-slate-950/90">
+      {/* PARTE SUPERIOR: ICONOS DE ÁREAS EN ORDEN FIJO (USUARIO -> SERVICIO TÉCNICO -> CREADOR -> CÓDIGO) */}
+      <div className="px-1.5 py-1 border-b border-slate-800 bg-slate-950/90 space-y-1">
+        {!colapsado && (
+          <span className="block text-[8px] uppercase tracking-wider text-slate-500 px-1 truncate">
+            Área de Usuario · Área de Servicio Técnico · Área de Creador
+          </span>
+        )}
         <div className={`grid gap-1 ${colapsado ? "grid-cols-1" : gridColsAreas}`}>
           {botonesAreasVisibles.map((btn) => {
             const IconBtn = btn.icon;
@@ -259,7 +287,7 @@ export default function SidebarUsuario({
           title="AU00 · Dashboard"
           className={`w-full flex items-center gap-1.5 px-2 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-tight ${
             estacionNormalizada === "AU00"
-              ? "bg-purple-600 text-white font-semibold"
+              ? "bg-purple-600 text-white"
               : "bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 text-slate-300 hover:text-white"
           }`}
         >
@@ -281,7 +309,7 @@ export default function SidebarUsuario({
               title={`${item.id} · ${item.label}`}
               className={`w-full flex items-center gap-1.5 px-2 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-tight ${
                 activo
-                  ? "bg-purple-600 text-white font-semibold"
+                  ? "bg-purple-600 text-white"
                   : "bg-slate-900/50 hover:bg-slate-900 border border-slate-800/70 text-slate-300 hover:text-white"
               }`}
             >
@@ -305,7 +333,7 @@ export default function SidebarUsuario({
             title="Portal AU01"
             className={`w-full flex items-center gap-1.5 px-2 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-tight ${
               estacionNormalizada === "AU10"
-                ? "bg-purple-600 text-white font-semibold"
+                ? "bg-purple-600 text-white"
                 : "bg-slate-900/50 hover:bg-slate-900 border border-slate-800/70 text-slate-300 hover:text-white"
             }`}
           >
@@ -322,7 +350,7 @@ export default function SidebarUsuario({
             title="Registro Pedido (AU02)"
             className={`w-full flex items-center gap-1.5 px-2 py-1 rounded transition-all cursor-pointer text-left text-[10px] leading-tight ${
               estacionNormalizada === "AU11"
-                ? "bg-amber-500 text-slate-950 font-semibold"
+                ? "bg-amber-500 text-slate-950"
                 : "bg-slate-900/50 hover:bg-slate-900 border border-slate-800/70 text-slate-300 hover:text-white"
             }`}
           >
@@ -340,7 +368,7 @@ export default function SidebarUsuario({
           disabled={sincronizando}
           title="Actualizar sistema"
           aria-label="Actualizar sistema"
-          className="w-full h-7 px-2 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer text-[10px] leading-tight font-semibold"
+          className="w-full h-7 px-2 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer text-[10px] leading-tight"
         >
           <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${sincronizando ? "animate-spin" : ""}`} />
           {!colapsado && (
@@ -361,7 +389,7 @@ export default function SidebarUsuario({
               <button
                 key={id}
                 type="button"
-                onClick={() => setTema(id)}
+                onClick={() => seleccionarTema(id)}
                 title={titulo}
                 aria-label={titulo}
                 className={`h-6 rounded flex items-center justify-center transition-all cursor-pointer ${
@@ -381,7 +409,7 @@ export default function SidebarUsuario({
           onClick={handleCerrarSesion}
           title="Cerrar sesión"
           aria-label="Cerrar sesión"
-          className="w-full h-7 px-2 rounded bg-red-950/50 hover:bg-red-900/70 border border-red-800/60 text-red-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer text-[10px] leading-tight font-semibold"
+          className="w-full h-7 px-2 rounded bg-red-950/50 hover:bg-red-900/70 border border-red-800/60 text-red-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer text-[10px] leading-tight"
         >
           <LogOut className="w-3.5 h-3.5 shrink-0" />
           {!colapsado && <span className="truncate">CERRAR SESIÓN</span>}
