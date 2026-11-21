@@ -1,18 +1,34 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PortadaMaestraAC00 from "./PortalesCreador/PortadaMaestraAC00";
 import PortalLicenciasAC09 from "./PortalesCreador/PortalLicenciasAC09";
 import PortalLaboratorioAC10 from "./PortalesCreador/PortalLaboratorioAC10";
 
 type VistaPortalActiva = "AC00" | "AC09" | "AC10" | "TODOS";
 
-export default function ConsolaPortalesCreador() {
-  const [vista, setVista] = useState<VistaPortalActiva>("AC00");
+interface ConsolaPortalesCreadorProps {
+  vistaInicial?: VistaPortalActiva;
+}
+
+export default function ConsolaPortalesCreador({
+  vistaInicial = "AC00",
+}: ConsolaPortalesCreadorProps) {
+  const [vista, setVista] = useState<VistaPortalActiva>(vistaInicial);
   const [ultimoPortalSolicitado, setUltimoPortalSolicitado] = useState<string>("");
+
+  useEffect(() => {
+    if (vistaInicial) {
+      setVista(vistaInicial);
+    }
+  }, [vistaInicial]);
 
   const handleSeleccionarPortalDesdeAC00 = (portalId: string) => {
     setUltimoPortalSolicitado(portalId);
+    const normalizado = portalId.trim().toUpperCase();
+    if (normalizado === "AC00" || normalizado === "AC09" || normalizado === "AC10") {
+      setVista(normalizado);
+    }
   };
 
   return (
