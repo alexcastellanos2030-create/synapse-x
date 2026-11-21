@@ -5,6 +5,7 @@ import SidebarCreador from "./AreaCreador/SidebarCreador";
 import SidebarServicioTecnico from "./AreaServicioTecnico/SidebarServicioTecnico";
 import SidebarUsuario from "./AreaUsuario/SidebarUsuario";
 import BovedaFamiliarAC01 from "./AreaCreador/PortalesCreador/BovedaFamiliarAC01";
+import ConsolaPortalesCreador from "./AreaCreador/ConsolaPortalesCreador";
 import DashboardAU00 from "./AreaUsuario/DashboardAU00";
 
 interface AreaOperacionesActivaProps {
@@ -20,6 +21,8 @@ interface AreaOperacionesActivaProps {
   onRefrescarEstado: () => void;
   onCerrarSesion: () => void;
 }
+
+const PORTALES_CONSOLA_CREADOR = new Set<string>(["AC00", "AC09", "AC10"]);
 
 export default function AreaOperacionesActiva({
   rolActivo,
@@ -44,7 +47,6 @@ export default function AreaOperacionesActiva({
     if (nuevaArea === "codigo") {
       if (esCreadorPrincipal || esBovedaFamiliarActiva) {
         setAreaActiva("creador");
-        setEstacionActiva("AC00");
         setVerAreaCodigos(true);
       }
       return;
@@ -66,16 +68,10 @@ export default function AreaOperacionesActiva({
   const abrirAreaCodigos = () => {
     if (!esCreadorPrincipal && !esBovedaFamiliarActiva) return;
     setAreaActiva("creador");
-    setEstacionActiva("AC00");
     setVerAreaCodigos(true);
   };
 
   const handleSeleccionEstacionCreador = (estacion: string) => {
-    if (estacion === "AC00" && (esCreadorPrincipal || esBovedaFamiliarActiva)) {
-      setEstacionActiva("AC00");
-      setVerAreaCodigos(true);
-      return;
-    }
     setVerAreaCodigos(false);
     setEstacionActiva(estacion);
   };
@@ -84,6 +80,11 @@ export default function AreaOperacionesActiva({
     setRefreshToken((prev) => prev + 1);
     onRefrescarEstado();
   };
+
+  const mostrarConsolaPortales =
+    areaActiva === "creador" &&
+    !verAreaCodigos &&
+    PORTALES_CONSOLA_CREADOR.has(estacionActiva);
 
   const mostrarBovedaFamiliar =
     areaActiva === "creador" &&
@@ -102,7 +103,7 @@ export default function AreaOperacionesActiva({
           areaActiva={verAreaCodigos ? "codigo" : areaActiva}
           onChangeArea={navegarArea}
           rolActivo={rolActivo}
-          estacionActiva={verAreaCodigos ? "AC00" : estacionActiva}
+          estacionActiva={estacionActiva}
           setEstacionActiva={handleSeleccionEstacionCreador}
           handleCerrarSesion={onCerrarSesion}
           onRefrescarEstado={onRefrescarEstado}
@@ -189,6 +190,15 @@ export default function AreaOperacionesActiva({
                   Desde este espacio administras la configuración maestra de Synapse-X (OSAI
                   Industrial).
                 </p>
+              </div>
+            </div>
+          ) : mostrarConsolaPortales ? (
+            <div className="p-6">
+              <div className="max-w-6xl mx-auto">
+                <ConsolaPortalesCreador
+                  key={`consola-${estacionActiva}`}
+                  vistaInicial={estacionActiva as "AC00" | "AC09" | "AC10"}
+                />
               </div>
             </div>
           ) : mostrarBovedaFamiliar ? (

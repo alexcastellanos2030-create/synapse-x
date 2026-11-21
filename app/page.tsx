@@ -20,13 +20,11 @@ import {
   obtenerCredencialCreadorPorCedula,
 } from "./components/AreaCreador/BovedaCreadorMaster";
 import CreadorLogin from "./components/AreaCreador/CreadorLogin";
-import ConsolaPortalesCreador from "./components/AreaCreador/ConsolaPortalesCreador";
 import PortalAccesoSimpleLED from "./components/PortalAccesoSimpleLED";
 import AreaOperacionesActiva from "./components/AreaOperacionesActiva";
 
 const ORDEN_PORTALES: PortalTipo[] = ["creador", "ingeniero", "tecnico", "usuario"];
 const CEDULAS_MASTER_FAMILIA = new Set<string>(Object.keys(CREADOR_MASTER_DATABASE));
-const ESTACIONES_CONSOLA_NUEVA = new Set<string>(["AC00", "AC09", "AC10"]);
 
 const CLAVES_LOCAL_SESION = [
   "synapse_sesion_activa",
@@ -320,9 +318,6 @@ export default function Home() {
     );
   }
 
-  const mostrarConsolaPorSidebar =
-    areaActiva === "creador" && ESTACIONES_CONSOLA_NUEVA.has(estacionActiva);
-
   return (
     <div className="min-h-screen bg-[#030712] text-slate-100 font-mono">
       <AreaOperacionesActiva
@@ -338,14 +333,6 @@ export default function Home() {
         onRefrescarEstado={handleRefrescarEstado}
         onCerrarSesion={handleCerrarSesion}
       />
-
-      {mostrarConsolaPorSidebar && (
-        <section className="max-w-7xl mx-auto px-4 pb-8 pt-2">
-          <ConsolaPortalesCreador
-            vistaInicial={estacionActiva as "AC00" | "AC09" | "AC10"}
-          />
-        </section>
-      )}
     </div>
   );
 }
