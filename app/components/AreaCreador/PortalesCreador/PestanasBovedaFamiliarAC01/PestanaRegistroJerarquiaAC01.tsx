@@ -1,298 +1,339 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { DESCRIPCION_NIVELES, PerfilFamiliar } from "../BovedaFamiliarTipos";
 
-export type EstadoUsuarioBoveda = "activo" | "bloqueado";
-
-export interface UsuarioBoveda {
-  id: string;
+export interface PestanaRegistroJerarquiaAC01Props {
+  perfiles: PerfilFamiliar[];
+  cargando: boolean;
   nombre: string;
-  nivel: number; // 1 al 10 (10 reservado para el Creador)
-  estado: EstadoUsuarioBoveda;
-}
-
-interface BovedaRegistroJerarquiaProps {
-  usuariosIniciales?: UsuarioBoveda[];
+  setNombre: React.Dispatch<React.SetStateAction<string>>;
+  cedula: string;
+  setCedula: React.Dispatch<React.SetStateAction<string>>;
+  claveMaestra: string;
+  setClaveMaestra: React.Dispatch<React.SetStateAction<string>>;
+  nivel: number;
+  setNivel: React.Dispatch<React.SetStateAction<number>>;
+  notaAprendizaje: string;
+  setNotaAprendizaje: React.Dispatch<React.SetStateAction<string>>;
+  onRegistrar: (e: React.FormEvent) => void | Promise<void>;
+  onCambiarNivel: (cedulaObjetivo: string, nuevoNivel: number) => void | Promise<void>;
+  onAbrirBitacora: (cedulaObjetivo: string) => void;
+  onToggleBloqueo: (cedulaObjetivo: string) => void | Promise<void>;
+  onEliminarPerfil?: (cedulaObjetivo: string) => void | Promise<void>;
   clavesAutorizadas?: string[];
-  onChangeUsuarios?: (usuarios: UsuarioBoveda[]) => void;
 }
 
-const DESCRIPCIONES_NIVEL: Record<number, string> = {
-  1: "Nivel 1 — Solo ver (inicio y observación básica)",
-  2: "Nivel 2 — Consulta ampliada de registros",
-  3: "Nivel 3 — Apoyo operativo inicial",
-  4: "Nivel 4 — Registro de datos básicos",
-  5: "Nivel 5 — Gestión operativa intermedia",
-  6: "Nivel 6 — Supervisión de procesos asignados",
-  7: "Nivel 7 — Coordinación avanzada de área",
-  8: "Nivel 8 — Control superior de bóveda",
-  9: "Nivel 9 — Máximo nivel asignable en registro",
-  10: "Nivel 10 — Nivel exclusivo del Creador",
-};
+const CLAVES_POR_DEFECTO = ["SYNAPSE10", "SYNAPSE2026", "ALEX2026", "BOVEDA-MASTER"];
 
-const CLAVES_POR_DEFECTO = ["SYNAPSE10", "ALEX2026", "BOVEDA-MASTER"];
-
-export default function BovedaRegistroJerarquia({
-  usuariosIniciales,
+export default function PestanaRegistroJerarquiaAC01({
+  perfiles,
+  cargando,
+  nombre,
+  setNombre,
+  cedula,
+  setCedula,
+  claveMaestra,
+  setClaveMaestra,
+  nivel,
+  setNivel,
+  notaAprendizaje,
+  setNotaAprendizaje,
+  onRegistrar,
+  onCambiarNivel,
+  onAbrirBitacora,
+  onToggleBloqueo,
+  onEliminarPerfil,
   clavesAutorizadas = CLAVES_POR_DEFECTO,
-  onChangeUsuarios,
-}: BovedaRegistroJerarquiaProps) {
-  const [usuarios, setUsuarios] = useState<UsuarioBoveda[]>(
-    usuariosIniciales ?? [
-      { id: "usr-1", nombre: "Alexander II Castellano Peroso", nivel: 10, estado: "activo" },
-      { id: "usr-2", nombre: "Alexander Castellano", nivel: 2, estado: "activo" },
-      { id: "usr-3", nombre: "Hija Uno", nivel: 5, estado: "activo" },
-    ]
-  );
-
-  // Estado para registro de nuevo usuario (niveles 1 a 9 disponibles en el selector)
-  const [nuevoNombre, setNuevoNombre] = useState("");
-  const [nivelInicial, setNivelInicial] = useState<number>(1);
-
-  // Casillas de selección (checklist) por usuario
+}: PestanaRegistroJerarquiaAC01Props) {
   const [seleccionados, setSeleccionados] = useState<Record<string, boolean>>({});
-
-  // Candados independientes por usuario y acción ("estado" = activar/bloquear, "eliminar" = borrar)
   const [candadosAbiertos, setCandadosAbiertos] = useState<Record<string, boolean>>({});
   const [modalClave, setModalClave] = useState<{
-    usuarioId: string;
+    cedulaObjetivo: string;
     accion: "estado" | "eliminar";
   } | null>(null);
   const [claveIngresada, setClaveIngresada] = useState("");
   const [errorClave, setErrorClave] = useState("");
 
-  const actualizarLista = (siguiente: UsuarioBoveda[]) => {
-    setUsuarios(siguiente);
-    onChangeUsuarios?.(siguiente);
+  const clavesValidas = useMemo(() => {
+    const clavesDePerfiles = perfiles
+      .map((p) => p.claveMaestra)
+      .filter((c): c is string => Boolean(c && c.trim()));
+    return Array.from(new Set([...clavesAutorizadas, ...clavesDePerfiles]));
+  }, [clavesAutorizadas, perfiles]);
+
+  const toggleSeleccion = (ced: string) => {
+    setSeleccionados((prev) => ({ ...prev, [ced]: !prev[ced] }));
   };
 
-  const toggleSeleccion = (id: string) => {
-    setSeleccionados((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const abrirCandado = (usuarioId: string, accion: "estado" | "eliminar") => {
-    const key = `${usuarioId}:${accion}`;
+  const abrirCandado = (cedulaObjetivo: string, accion: "estado" | "eliminar") => {
+    const key = `${cedulaObjetivo}:${accion}`;
     if (candadosAbiertos[key]) {
       setCandadosAbiertos((prev) => ({ ...prev, [key]: false }));
       return;
     }
     setErrorClave("");
     setClaveIngresada("");
-    setModalClave({ usuarioId, accion });
+    setModalClave({ cedulaObjetivo, accion });
   };
 
   const confirmarClave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!modalClave) return;
-    const valida = clavesAutorizadas.some(
+
+    const valida = clavesValidas.some(
       (c) => c.trim().toUpperCase() === claveIngresada.trim().toUpperCase()
     );
+
     if (!valida) {
       setErrorClave("Clave no autorizada. Verifica e intenta de nuevo.");
       return;
     }
-    const key = `${modalClave.usuarioId}:${modalClave.accion}`;
+
+    const key = `${modalClave.cedulaObjetivo}:${modalClave.accion}`;
     setCandadosAbiertos((prev) => ({ ...prev, [key]: true }));
     setModalClave(null);
     setClaveIngresada("");
     setErrorClave("");
   };
 
-  const alternarEstadoUsuario = (id: string) => {
-    const key = `${id}:estado`;
-    if (!candadosAbiertos[key]) return;
-    actualizarLista(
-      usuarios.map((u) =>
-        u.id === id ? { ...u, estado: u.estado === "activo" ? "bloqueado" : "activo" } : u
-      )
-    );
-  };
-
-  const eliminarUsuario = (id: string) => {
-    const key = `${id}:eliminar`;
-    if (!candadosAbiertos[key]) return;
-    actualizarLista(usuarios.filter((u) => u.id !== id));
-    setSeleccionados((prev) => {
-      const copia = { ...prev };
-      delete copia[id];
-      return copia;
-    });
-  };
-
-  const agregarUsuario = (e: React.FormEvent) => {
-    e.preventDefault();
-    const limpio = nuevoNombre.trim();
-    if (!limpio) return;
-    const nivelSeguro = Math.min(9, Math.max(1, nivelInicial));
-    const nuevo: UsuarioBoveda = {
-      id: `usr-${Date.now()}`,
-      nombre: limpio,
-      nivel: nivelSeguro,
-      estado: "activo",
-    };
-    actualizarLista([...usuarios, nuevo]);
-    setNuevoNombre("");
-  };
-
-  const usuariosOrdenados = useMemo(
-    () => [...usuarios].sort((a, b) => b.nivel - a.nivel),
-    [usuarios]
+  const perfilesOrdenados = useMemo(
+    () => [...perfiles].sort((a, b) => b.nivel - a.nivel),
+    [perfiles]
   );
 
   return (
-    <div className="space-y-4 p-3 rounded border border-slate-800 bg-slate-950/80 text-xs">
-      {/* Formulario de Registro */}
-      <form onSubmit={agregarUsuario} className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <input
-          type="text"
-          value={nuevoNombre}
-          onChange={(e) => setNuevoNombre(e.target.value)}
-          placeholder="Nombre del usuario a registrar"
-          className="px-2.5 py-1.5 rounded border border-slate-700 bg-slate-900 text-slate-100"
-        />
+    <div className="space-y-5 text-xs">
+      {/* FORMULARIO DE REGISTRO EN BÓVEDA FAMILIAR */}
+      <form
+        onSubmit={onRegistrar}
+        className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-3"
+      >
+        <div className="text-[11px] uppercase tracking-wider text-emerald-400 font-bold">
+          Registrar Integrante en Bóveda Familiar (Niveles 1 al 9)
+        </div>
 
-        <select
-          value={nivelInicial}
-          onChange={(e) => setNivelInicial(Number(e.target.value))}
-          aria-label="Nivel inicial"
-          className="px-2.5 py-1.5 rounded border border-slate-700 bg-slate-900 text-slate-100"
-        >
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
-            <option key={lvl} value={lvl}>
-              {DESCRIPCIONES_NIVEL[lvl]}
-            </option>
-          ))}
-        </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <input
+            type="text"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="Nombre completo"
+            className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-950 text-slate-100"
+          />
 
-        <button
-          type="submit"
-          className="px-3 py-1.5 rounded bg-amber-500 text-slate-950 hover:bg-amber-400 cursor-pointer"
-        >
-          Agregar Usuario
-        </button>
+          <input
+            type="text"
+            value={cedula}
+            onChange={(e) => setCedula(e.target.value)}
+            placeholder="Cédula (solo números)"
+            className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-950 text-slate-100"
+          />
+
+          <input
+            type="password"
+            value={claveMaestra}
+            onChange={(e) => setClaveMaestra(e.target.value)}
+            placeholder="Clave maestra asignada"
+            className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-950 text-slate-100"
+          />
+
+          <select
+            value={nivel}
+            onChange={(e) => setNivel(Number(e.target.value))}
+            aria-label="Nivel asignado"
+            className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-950 text-slate-100"
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
+              <option key={lvl} value={lvl}>
+                {DESCRIPCION_NIVELES[lvl]?.titulo || `Nivel ${lvl}`}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-2.5">
+          <input
+            type="text"
+            value={notaAprendizaje}
+            onChange={(e) => setNotaAprendizaje(e.target.value)}
+            placeholder="Nota de etapa / supervisión inicial (opcional)"
+            className="flex-1 px-3 py-2 rounded-lg border border-slate-700 bg-slate-950 text-slate-100"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold uppercase tracking-wider cursor-pointer shrink-0"
+          >
+            + Registrar Integrante
+          </button>
+        </div>
       </form>
 
-      {/* Gestión de usuarios con checklist y microbotones con candadito */}
-      <div className="space-y-1.5">
-        {usuarios.map((u) => {
-          const estadoDesbloqueado = Boolean(candadosAbiertos[`${u.id}:estado`]);
-          const eliminarDesbloqueado = Boolean(candadosAbiertos[`${u.id}:eliminar`]);
-          const esActivo = u.estado === "activo";
+      {/* GESTIÓN DE USUARIOS CON CHECKLIST Y CANDADOS */}
+      <div className="space-y-2">
+        <div className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">
+          Control de Accesos y Candados de Seguridad
+        </div>
 
-          return (
-            <div
-              key={u.id}
-              className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border border-slate-800 bg-slate-900/70"
-            >
-              <label className="flex items-center gap-2 cursor-pointer min-w-0">
-                <input
-                  type="checkbox"
-                  checked={Boolean(seleccionados[u.id])}
-                  onChange={() => toggleSeleccion(u.id)}
-                  className="w-3.5 h-3.5 cursor-pointer"
-                />
-                <span className="truncate">{u.nombre}</span>
-              </label>
+        {cargando && perfiles.length === 0 ? (
+          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/40 text-slate-400">
+            Cargando registros de bóveda...
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {perfilesOrdenados.map((p) => {
+              const esCreador = p.nivel === 10;
+              const estadoDesbloqueado = Boolean(candadosAbiertos[`${p.cedula}:estado`]);
+              const eliminarDesbloqueado = Boolean(candadosAbiertos[`${p.cedula}:eliminar`]);
+              const esActivo = !p.bloqueado;
 
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Microbotón Activar / Bloquear (verde/rojo) + su candadito */}
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    disabled={!estadoDesbloqueado}
-                    onClick={() => alternarEstadoUsuario(u.id)}
-                    title={
-                      estadoDesbloqueado
-                        ? esActivo
-                          ? "Bloquear usuario"
-                          : "Activar usuario"
-                        : "Abre el candadito con tu clave para cambiar estado"
-                    }
-                    className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
-                      esActivo ? "bg-emerald-500 text-slate-950" : "bg-rose-600 text-white"
-                    } ${estadoDesbloqueado ? "cursor-pointer opacity-100" : "opacity-50 cursor-not-allowed"}`}
-                  >
-                    {esActivo ? "Activo" : "Bloqueado"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => abrirCandado(u.id, "estado")}
-                    title={
-                      estadoDesbloqueado
-                        ? "Cerrar candado de estado"
-                        : "Desbloquear candado de estado con clave"
-                    }
-                    aria-label="Candado de activar o bloquear"
-                    className="px-1.5 py-0.5 rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 cursor-pointer text-[11px]"
-                  >
-                    {estadoDesbloqueado ? "🔓" : "🔒"}
-                  </button>
+              return (
+                <div
+                  key={p.cedula}
+                  className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl border border-slate-800 bg-slate-900/70"
+                >
+                  <label className="flex items-center gap-2.5 cursor-pointer min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(seleccionados[p.cedula])}
+                      onChange={() => toggleSeleccion(p.cedula)}
+                      className="w-3.5 h-3.5 cursor-pointer"
+                    />
+                    <div className="min-w-0">
+                      <div className="font-bold text-slate-100 truncate">
+                        {p.nombre}{" "}
+                        <span className="text-[10px] text-amber-400 font-normal">
+                          (Nivel {p.nivel})
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate">
+                        CI: {p.cedula} · {p.rol}
+                      </div>
+                    </div>
+                  </label>
+
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {!esCreador && (
+                      <select
+                        value={p.nivel}
+                        onChange={(e) => onCambiarNivel(p.cedula, Number(e.target.value))}
+                        aria-label={`Nivel de ${p.nombre}`}
+                        className="px-2 py-1 rounded border border-slate-700 bg-slate-950 text-[11px] text-slate-200 cursor-pointer"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
+                          <option key={lvl} value={lvl}>
+                            Nivel {lvl}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => onAbrirBitacora(p.cedula)}
+                      className="px-2.5 py-1 rounded border border-cyan-500/40 bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 text-[10px] font-bold cursor-pointer"
+                    >
+                      Bitácora
+                    </button>
+
+                    {!esCreador && (
+                      <>
+                        {/* Activar / Bloquear + candadito */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={!estadoDesbloqueado}
+                            onClick={() => onToggleBloqueo(p.cedula)}
+                            title={
+                              estadoDesbloqueado
+                                ? esActivo
+                                  ? "Bloquear usuario"
+                                  : "Activar usuario"
+                                : "Abre el candadito con tu clave para cambiar estado"
+                            }
+                            className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${
+                              esActivo ? "bg-emerald-500 text-slate-950" : "bg-rose-600 text-white"
+                            } ${
+                              estadoDesbloqueado
+                                ? "cursor-pointer opacity-100"
+                                : "opacity-50 cursor-not-allowed"
+                            }`}
+                          >
+                            {esActivo ? "Activo" : "Bloqueado"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => abrirCandado(p.cedula, "estado")}
+                            title={
+                              estadoDesbloqueado
+                                ? "Cerrar candado de estado"
+                                : "Desbloquear candado de estado con clave"
+                            }
+                            className="px-1.5 py-1 rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 cursor-pointer text-[11px]"
+                          >
+                            {estadoDesbloqueado ? "🔓" : "🔒"}
+                          </button>
+                        </div>
+
+                        {/* Eliminar (si está conectado) + candadito */}
+                        {onEliminarPerfil && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              disabled={!eliminarDesbloqueado}
+                              onClick={() => onEliminarPerfil(p.cedula)}
+                              className={`px-2 py-1 rounded text-[10px] font-bold bg-red-600 text-white ${
+                                eliminarDesbloqueado
+                                  ? "hover:bg-red-500 cursor-pointer opacity-100"
+                                  : "opacity-50 cursor-not-allowed"
+                              }`}
+                            >
+                              Eliminar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => abrirCandado(p.cedula, "eliminar")}
+                              className="px-1.5 py-1 rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 cursor-pointer text-[11px]"
+                            >
+                              {eliminarDesbloqueado ? "🔓" : "🔒"}
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-
-                {/* Microbotón Eliminar + su candadito */}
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    disabled={!eliminarDesbloqueado}
-                    onClick={() => eliminarUsuario(u.id)}
-                    title={
-                      eliminarDesbloqueado
-                        ? "Eliminar usuario"
-                        : "Abre el candadito con tu clave para eliminar"
-                    }
-                    className={`px-2 py-0.5 rounded text-[10px] bg-red-600 text-white ${
-                      eliminarDesbloqueado
-                        ? "hover:bg-red-500 cursor-pointer opacity-100"
-                        : "opacity-50 cursor-not-allowed"
-                    }`}
-                  >
-                    Eliminar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => abrirCandado(u.id, "eliminar")}
-                    title={
-                      eliminarDesbloqueado
-                        ? "Cerrar candado de eliminación"
-                        : "Desbloquear candado de eliminación con clave"
-                    }
-                    aria-label="Candado de eliminar"
-                    className="px-1.5 py-0.5 rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 cursor-pointer text-[11px]"
-                  >
-                    {eliminarDesbloqueado ? "🔓" : "🔒"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Lista de Jerarquía Activa en Bóveda Familiar: solo muestra el número de nivel */}
-      <div className="pt-2 border-t border-slate-800 space-y-1">
+      {/* JERARQUÍA ACTIVA EN BÓVEDA FAMILIAR */}
+      <div className="pt-2 border-t border-slate-800 space-y-1.5">
         <div className="text-[11px] text-slate-400">
           Jerarquía activa en bóveda familiar (Nivel)
         </div>
-        <div className="divide-y divide-slate-800/70 rounded border border-slate-800 bg-slate-900/40">
-          {usuariosOrdenados.map((u) => (
-            <div key={u.id} className="flex items-center justify-between px-2.5 py-1.5">
-              <span className="truncate">{u.nombre}</span>
-              <span className="num px-2 py-0.5 rounded bg-slate-800 text-amber-400">
-                {u.nivel}
+        <div className="divide-y divide-slate-800/70 rounded-xl border border-slate-800 bg-slate-900/40">
+          {perfilesOrdenados.map((p) => (
+            <div key={p.cedula} className="flex items-center justify-between px-3 py-2">
+              <span className="truncate">{p.nombre}</span>
+              <span className="px-2.5 py-0.5 rounded bg-slate-800 text-amber-400 font-bold">
+                {p.nivel}
               </span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Modal / panel de clave para abrir el candadito */}
+      {/* MODAL DE CLAVE PARA ABRIR CANDADO */}
       {modalClave && (
         <form
           onSubmit={confirmarClave}
-          className="p-3 rounded border border-amber-500/40 bg-slate-900 space-y-2"
+          className="p-3 rounded-xl border border-amber-500/40 bg-slate-900 space-y-2"
         >
           <div className="text-amber-300">
-            Ingresa una de tus claves registradas para abrir el candadito de{" "}
+            Ingresa una clave autorizada para abrir el candadito de{" "}
             {modalClave.accion === "eliminar" ? "Eliminar" : "Activar / Bloquear"}:
           </div>
           <div className="flex gap-2">
@@ -302,11 +343,11 @@ export default function BovedaRegistroJerarquia({
               onChange={(e) => setClaveIngresada(e.target.value)}
               placeholder="Clave registrada"
               autoFocus
-              className="flex-1 px-2.5 py-1 rounded border border-slate-700 bg-slate-950 text-slate-100"
+              className="flex-1 px-2.5 py-1.5 rounded border border-slate-700 bg-slate-950 text-slate-100"
             />
             <button
               type="submit"
-              className="px-3 py-1 rounded bg-emerald-500 text-slate-950 cursor-pointer"
+              className="px-3 py-1.5 rounded bg-emerald-500 text-slate-950 font-bold cursor-pointer"
             >
               Liberar
             </button>
@@ -316,7 +357,7 @@ export default function BovedaRegistroJerarquia({
                 setModalClave(null);
                 setErrorClave("");
               }}
-              className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 cursor-pointer"
+              className="px-2.5 py-1.5 rounded bg-slate-800 text-slate-300 cursor-pointer"
             >
               Cancelar
             </button>
